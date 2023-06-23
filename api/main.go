@@ -59,7 +59,7 @@ func statement(w http.ResponseWriter, req *http.Request) {
 		if !ok {
 			http.Error(w, fmt.Sprintf("Account with number %v can't be found!", number), http.StatusNotFound)
 		} else {
-			fmt.Fprintf(w, account.Statement())
+			fmt.Fprintf(w, "%v", account.Statement())
 		}
 	}
 }
@@ -89,7 +89,7 @@ func deposit(w http.ResponseWriter, req *http.Request) {
 			if err != nil {
 				http.Error(w, fmt.Sprintf("%v", err), http.StatusBadRequest)
 			} else {
-				fmt.Fprintf(w, account.Statement())
+				fmt.Fprintf(w, "%v", account.Statement())
 			}
 		}
 	}
@@ -121,7 +121,7 @@ func withdraw(w http.ResponseWriter, req *http.Request) {
 			if err != nil {
 				http.Error(w, fmt.Sprintf("%v", err), http.StatusBadRequest)
 			} else {
-				fmt.Fprintf(w, account.Statement())
+				fmt.Fprintf(w, "%v", account.Statement())
 			}
 		}
 	}
