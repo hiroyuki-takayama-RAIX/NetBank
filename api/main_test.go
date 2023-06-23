@@ -18,7 +18,7 @@ type fixture struct {
 
 // i wanna change this name better...
 // this function get fixture and show test result.
-func ListenAndServe(f fixture, h func(w http.ResponseWriter, req *http.Request), t *testing.T) {
+func ListenAndServe(f *fixture, h func(w http.ResponseWriter, req *http.Request), t *testing.T) {
 	req, err := http.NewRequest("GET", f.request, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -53,26 +53,27 @@ func TestStatement(t *testing.T) {
 	*/
 
 	// upper lines are correct, but make()'s second argument is useful to make clear number of test pattern.
-	fs := make([]fixture, 4)
-	fs[0] = fixture{
+	// *fixture means
+	fs := make([]*fixture, 4)
+	fs[0] = &fixture{
 		name:         "Successfully getting statement",
 		request:      fmt.Sprintf("/statement?number=%v", 1001),
 		expectedCode: http.StatusOK,
 		expectedBody: fmt.Sprintf("%v - %s - %v", 1001, "John", 100),
 	}
-	fs[1] = fixture{
+	fs[1] = &fixture{
 		name:         "Account with the number cant be found",
 		request:      fmt.Sprintf("/statement?number=%v", 404),
 		expectedCode: http.StatusNotFound,
 		expectedBody: fmt.Sprintf("Account with number %v can't be found!\n", 404),
 	}
-	fs[2] = fixture{
+	fs[2] = &fixture{
 		name:         "Account number is missing",
 		request:      fmt.Sprintf("/statement?n=%v", 1001),
 		expectedCode: http.StatusBadRequest,
 		expectedBody: "Account number is missing!\n",
 	}
-	fs[3] = fixture{
+	fs[3] = &fixture{
 		name:         "Invalid account number!",
 		request:      fmt.Sprintf("/statement?number=%v", "千一"),
 		expectedCode: http.StatusBadRequest,
@@ -104,32 +105,32 @@ func TestStatement(t *testing.T) {
 }
 
 func TestDeposit(t *testing.T) {
-	fs := make([]fixture, 5)
-	fs[0] = fixture{
+	fs := make([]*fixture, 5)
+	fs[0] = &fixture{
 		name:         "Successfully deposit",
 		request:      "/deposit?number=1001&amount=20",
 		expectedCode: http.StatusOK,
 		expectedBody: fmt.Sprintf("%v - %s - %v", 1001, "John", 20),
 	}
-	fs[1] = fixture{
+	fs[1] = &fixture{
 		name:         "Account with number cant be found!",
 		request:      "deposite?number=404&amount=20",
 		expectedCode: http.StatusNotFound,
 		expectedBody: fmt.Sprintf("Account with number %v can't be found!\n", 404),
 	}
-	fs[2] = fixture{
+	fs[2] = &fixture{
 		name:         "Amount of deposit must be more than zero",
 		request:      "deposite?number=1001&amount=-20",
 		expectedCode: http.StatusBadRequest,
 		expectedBody: "Amount must be more than zero!\n",
 	}
-	fs[3] = fixture{
+	fs[3] = &fixture{
 		name:         "Invalid account number!",
 		request:      "deposite?number=千一&amount=20",
 		expectedCode: http.StatusBadRequest,
 		expectedBody: fmt.Sprintf("%v is invalid account number!\n", "千一"),
 	}
-	fs[4] = fixture{
+	fs[4] = &fixture{
 		name:         "Invalid amount number!",
 		request:      "deposite?number=1001&amount=二十",
 		expectedCode: http.StatusBadRequest,
@@ -156,38 +157,38 @@ func TestDeposit(t *testing.T) {
 }
 
 func TestWithdraw(t *testing.T) {
-	fs := make([]fixture, 6)
-	fs[0] = fixture{
+	fs := make([]*fixture, 6)
+	fs[0] = &fixture{
 		name:         "Successfully withdraw",
 		request:      "/withdraw?number=1001&amount=10",
 		expectedCode: http.StatusOK,
 		expectedBody: fmt.Sprintf("%v - %s - %v", 1001, "John", 10),
 	}
-	fs[1] = fixture{
+	fs[1] = &fixture{
 		name:         "Account with number cant be found!",
 		request:      "/withdraw?number=404&amount=20",
 		expectedCode: http.StatusNotFound,
 		expectedBody: fmt.Sprintf("Account with number %v can't be found!\n", 404),
 	}
-	fs[2] = fixture{
+	fs[2] = &fixture{
 		name:         "Amount of withdraw must be more than zero!",
 		request:      "/withdraw?number=1001&amount=-20",
 		expectedCode: http.StatusBadRequest,
 		expectedBody: "Amount must be more than zero!\n",
 	}
-	fs[3] = fixture{
+	fs[3] = &fixture{
 		name:         "Invalid account number!",
 		request:      "/withdraw?number=千一&amount=20",
 		expectedCode: http.StatusBadRequest,
 		expectedBody: "千一 is invalid account number!\n",
 	}
-	fs[4] = fixture{
+	fs[4] = &fixture{
 		name:         "Invalid amount number!",
 		request:      "/withdraw?number=1001&amount=二十",
 		expectedCode: http.StatusBadRequest,
 		expectedBody: "二十 is invalid amount number!\n",
 	}
-	fs[5] = fixture{
+	fs[5] = &fixture{
 		name:         "Amount of withdraw must be more than deposit!",
 		request:      "/withdraw?number=1001&amount=30",
 		expectedCode: http.StatusBadRequest,
@@ -215,50 +216,50 @@ func TestWithdraw(t *testing.T) {
 }
 
 func TestTransfar(t *testing.T) {
-	fs := make([]fixture, 8)
-	fs[0] = fixture{
+	fs := make([]*fixture, 8)
+	fs[0] = &fixture{
 		name:         "Successfully transfer",
 		request:      "/transtfer?from=1001&to=2002&amount=10",
 		expectedCode: http.StatusOK,
 		expectedBody: fmt.Sprintf("sender : %v\nreviever : %v", "1001 - John - 90", "2002 - C.J. - 110"),
 	}
-	fs[1] = fixture{
+	fs[1] = &fixture{
 		name:         "Account with number cant be found",
 		request:      "/transtfer?from=404&to=2002&amount=20",
 		expectedCode: http.StatusNotFound,
 		expectedBody: fmt.Sprintf("Account of sender with number %v can't be found!\n", 404),
 	}
-	fs[2] = fixture{
+	fs[2] = &fixture{
 		name:         "Account with number cant be found",
 		request:      "/transtfer?from=1001&to=404&amount=20",
 		expectedCode: http.StatusNotFound,
 		expectedBody: fmt.Sprintf("Account of reciever with number %v can't be found!\n", 404),
 	}
-	fs[3] = fixture{
+	fs[3] = &fixture{
 		name:         "Amount must be more than zero!",
 		request:      "/transfer?from=1001&to=2002&amount=-20",
 		expectedCode: http.StatusBadRequest,
 		expectedBody: "Amount must be more than zero!\n",
 	}
-	fs[4] = fixture{
+	fs[4] = &fixture{
 		name:         "transfer is greater than deposit",
 		request:      "/transfer?from=1001&to=2002&amount=200",
 		expectedCode: http.StatusBadRequest,
 		expectedBody: "transfer is greater than deposit!\n",
 	}
-	fs[5] = fixture{
+	fs[5] = &fixture{
 		name:         "Invalid sender's account number!",
 		request:      "/transfer?from=千一&to=2002&amount=100",
 		expectedCode: http.StatusBadRequest,
 		expectedBody: "千一 is invalid account number!\n",
 	}
-	fs[6] = fixture{
+	fs[6] = &fixture{
 		name:         "Invalid reciever's account number!",
 		request:      "/transfer?from=1001&to=二千二&amount=100",
 		expectedCode: http.StatusBadRequest,
 		expectedBody: "二千二 is invalid account number!\n",
 	}
-	fs[7] = fixture{
+	fs[7] = &fixture{
 		name:         "Invalid amont number!",
 		request:      "/transfer?from=1001&to=2002&amount=百",
 		expectedCode: http.StatusBadRequest,
@@ -296,7 +297,7 @@ func TestTransfar(t *testing.T) {
 
 func TestTeapot(t *testing.T) {
 
-	f := fixture{
+	f := &fixture{
 		name:         "I'm a teapot.",
 		request:      "/teapot",
 		expectedCode: http.StatusTeapot,
