@@ -24,8 +24,13 @@ func main() {
 		Number: 1001,
 	}
 
-	// set statment as handler function in '/statement'
+	// set statment as handler function in path
 	http.HandleFunc("/statement", statement)
+	http.HandleFunc("/withdraw", withdraw)
+	http.HandleFunc("/deposit", deposit)
+	http.HandleFunc("/transfer", transfer)
+	http.HandleFunc("/teapot", teapot)
+
 	// log.fatal show you log with date_time
 	log.Fatal(http.ListenAndServe("localhost:8000", nil))
 }
@@ -42,17 +47,17 @@ func statement(w http.ResponseWriter, req *http.Request) {
 
 	if numberqs == "" {
 		// http.ResponseWriter is io.Writer interface and Fprintf() write data into io.Writer interface.
-		fmt.Fprintf(w, "Account number is missing!")
+		http.Error(w, "Account number is missing!", http.StatusBadRequest)
 		return
 	}
 
 	// parse request
 	if number, err := strconv.ParseFloat(numberqs, 64); err != nil {
-		fmt.Fprintf(w, "Invalid account number!")
+		http.Error(w, fmt.Sprintf("%v is invalid account number!", numberqs), http.StatusBadRequest)
 	} else {
 		account, ok := accounts[number]
 		if !ok {
-			fmt.Fprintf(w, "Account with number %v can't be found!", number)
+			http.Error(w, fmt.Sprintf("Account with number %v can't be found!", number), http.StatusNotFound)
 		} else {
 			fmt.Fprintf(w, account.Statement())
 		}
@@ -69,21 +74,20 @@ func deposit(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// below lines are error handlings of numberqs
 	if number, err := strconv.ParseFloat(numberqs, 64); err != nil {
-		fmt.Fprintf(w, fmt.Sprintf("%v is invalid account number!", number))
+		http.Error(w, fmt.Sprintf("%v is invalid account number!", numberqs), http.StatusBadRequest)
 	} else if amount, err := strconv.ParseFloat(amountqs, 64); err != nil {
-		fmt.Fprintf(w, fmt.Sprintf("%v is Invalid amount number!", amount))
+		http.Error(w, fmt.Sprintf("%v is invalid amount number!", amountqs), http.StatusBadRequest)
 	} else {
 		account, ok := accounts[number]
 		if !ok {
-			fmt.Fprintf(w, "Account with number %v can't be found!", number)
+			http.Error(w, fmt.Sprintf("Account with number %v can't be found!", number), http.StatusNotFound)
 
-			// below lines are error handling of amountqs
 		} else {
+			//when amount is less than zero, error is not nil.
 			err := account.Deposit(amount)
 			if err != nil {
-				fmt.Fprintf(w, "%v", err)
+				http.Error(w, fmt.Sprintf("%v", err), http.StatusBadRequest)
 			} else {
 				fmt.Fprintf(w, account.Statement())
 			}
@@ -103,19 +107,19 @@ func withdraw(w http.ResponseWriter, req *http.Request) {
 
 	// below lines are error handlings of numberqs
 	if number, err := strconv.ParseFloat(numberqs, 64); err != nil {
-		fmt.Fprintf(w, fmt.Sprintf("%v is invalid account number!", number))
+		http.Error(w, fmt.Sprintf("%v is invalid account number!", numberqs), http.StatusBadRequest)
 	} else if amount, err := strconv.ParseFloat(amountqs, 64); err != nil {
-		fmt.Fprintf(w, fmt.Sprintf("%v is Invalid amount number!", amount))
+		http.Error(w, fmt.Sprintf("%v is invalid amount number!", amountqs), http.StatusBadRequest)
 	} else {
 		account, ok := accounts[number]
 		if !ok {
-			fmt.Fprintf(w, "Account with number %v can't be found!", number)
+			http.Error(w, fmt.Sprintf("Account with number %v can't be found!", number), http.StatusNotFound)
 
 			// below lines are error handling of amountqs
 		} else {
 			err := account.Withdraw(amount)
 			if err != nil {
-				fmt.Fprintf(w, "%v", err)
+				http.Error(w, fmt.Sprintf("%v", err), http.StatusBadRequest)
 			} else {
 				fmt.Fprintf(w, account.Statement())
 			}
@@ -141,23 +145,23 @@ func transfer(w http.ResponseWriter, req *http.Request) {
 
 	// below lines are error handlings of numberqs
 	if senderNumber, err := strconv.ParseFloat(senderNumberqs, 64); err != nil {
-		fmt.Fprintf(w, fmt.Sprintf("%v is invalid account number!", senderNumber))
+		http.Error(w, fmt.Sprintf("%v is invalid account number!", senderNumberqs), http.StatusBadRequest)
 	} else if recieverNumber, err := strconv.ParseFloat(recieverNumberqs, 64); err != nil {
-		fmt.Fprintf(w, fmt.Sprintf("%v is Invalid account number!", recieverNumber))
+		http.Error(w, fmt.Sprintf("%v is invalid account number!", recieverNumberqs), http.StatusBadRequest)
 	} else if amount, err := strconv.ParseFloat(amountqs, 64); err != nil {
-		fmt.Fprintf(w, fmt.Sprintf("%v is Invalid amount number!", amount))
+		http.Error(w, fmt.Sprintf("%v is invalid amount number!", amountqs), http.StatusBadRequest)
 	} else {
 		sender, senderOk := accounts[senderNumber]
 		reciever, recieverOk := accounts[recieverNumber]
 		if !senderOk {
-			fmt.Fprintf(w, "Account of sender with number %v can't be found!", senderNumber)
+			http.Error(w, fmt.Sprintf("Account of sender with number %v can't be found!", senderNumber), http.StatusNotFound)
 		} else if !recieverOk {
-			fmt.Fprintf(w, "Account of reciever with number %v can't be found!", recieverNumber)
+			http.Error(w, fmt.Sprintf("Account of reciever with number %v can't be found!", recieverNumber), http.StatusNotFound)
 			// below lines are error handling of amountqs
 		} else {
 			err := sender.Transfer(reciever, amount)
 			if err != nil {
-				fmt.Fprintf(w, "%v", err)
+				http.Error(w, fmt.Sprintf("%v", err), http.StatusBadRequest)
 			} else {
 				fmt.Fprintf(w, "sender : %v\nreviever : %v", sender.Statement(), reciever.Statement())
 			}
@@ -165,6 +169,6 @@ func transfer(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func badRequest(w http.ResponseWriter, r *http.Request) {
-	http.Error(w, "Bad Request", http.StatusBadRequest)
+func teapot(w http.ResponseWriter, r *http.Request) {
+	http.Error(w, "418 : I'm a teapot.", http.StatusTeapot)
 }

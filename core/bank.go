@@ -24,20 +24,24 @@ type jsonStatement interface {
 }
 
 // custome error must be initialized by 'var ~ = errors.New("・・・")
-var BALANCE_LESS_THAN_ZERO_ERROR = errors.New("A balance must be zore or more!")
-var AMOUNT_LESS_THAN_ZERO_ERROR = errors.New("An amount is less than zero!")
-var TRANSFER_GREATER_THAN_DEPOSIT_ERROR = errors.New("transfer is greater than deposit!")
+var (
+	BALANCE_LESS_THAN_ZERO_ERROR        = errors.New("A balance must be zore or more!")
+	AMOUNT_LESS_THAN_ZERO_ERROR         = errors.New("Amount must be more than zero!")
+	TRANSFER_GREATER_THAN_DEPOSIT_ERROR = errors.New("transfer is greater than deposit!")
+	WITHDRAW_GREATER_THAN_DEPOSIT_ERROR = errors.New("Amount of withdraw must be more than deposit!")
+)
 
 // any function ans method should have error handling programm at least one
-//Deposit ...
+// Deposit ...
 func (a *Account) Deposit(f float64) error {
 	if f <= 0 {
 		return AMOUNT_LESS_THAN_ZERO_ERROR
 	}
 
-	if a.Balance += f; a.Balance < 0 {
+	if 0 > a.Balance+f {
 		return BALANCE_LESS_THAN_ZERO_ERROR
 	} else {
+		a.Balance += f
 		return nil
 	}
 }
@@ -47,9 +51,10 @@ func (a *Account) Withdraw(f float64) error {
 		return AMOUNT_LESS_THAN_ZERO_ERROR
 	}
 
-	if a.Balance -= f; a.Balance < 0 {
-		return BALANCE_LESS_THAN_ZERO_ERROR
+	if 0 > a.Balance-f {
+		return WITHDRAW_GREATER_THAN_DEPOSIT_ERROR
 	} else {
+		a.Balance -= f
 		return nil
 	}
 }
