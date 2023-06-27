@@ -1,0 +1,33 @@
+json:
+    - change http response in main.go to json format.
+    xml:
+        - change http respoanse in main.go to xml format.
+        - compare json and xml.
+
+log_output:
+
+error_handling:
+
+coding_rules:
+
+# learn postgresql with https://www.postgresqltutorial.com/
+postgre_sql:
+    create:
+    read:
+    update:
+    delete:
+        - not forget to use "where" to delete spesific row!
+    connect_golang_to_postgresql:
+        - make method to read account info from the postgre server.
+        - make method to update the number of Balance.
+        - make method to create a new account.
+        - make method to delete an account.
+        docker:
+            - bulid postgresql server with docker.
+
+gin:
+
+or_mapper:
+    gorm_ent:
+
+grpc:
