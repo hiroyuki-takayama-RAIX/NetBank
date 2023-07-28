@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -25,13 +26,17 @@ func main() {
 	}
 
 	// set statment as handler function in path
+	// REST API は各リソースをURIという識別子で示し、これらに対してGETやPOSTといったメソッドを使用してリクエストを送る。
+	// http.HandleFunc() はリクエストの状態の保持をしておらず、リクエストを処理しているだけ。
 	http.HandleFunc("/statement", statement)
 	http.HandleFunc("/withdraw", withdraw)
 	http.HandleFunc("/deposit", deposit)
 	http.HandleFunc("/transfer", transfer)
 	http.HandleFunc("/teapot", teapot)
+	http.HandleFunc("/createAccount", createAccount)
 
 	// log.fatal show you log with date_time
+	// REST API は HTTP Protocol を使用した通信を行う。
 	log.Fatal(http.ListenAndServe("localhost:8000", nil))
 }
 
@@ -171,4 +176,26 @@ func transfer(w http.ResponseWriter, req *http.Request) {
 
 func teapot(w http.ResponseWriter, r *http.Request) {
 	http.Error(w, "418 : I'm a teapot.", http.StatusTeapot)
+}
+
+func createAccount(w http.ResponseWriter, r *http.Request) {
+	// リクエストメソッドがPOSTでない場合はエラーを返す
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+
+	// リクエストのボディをパースしてデータを取得
+	var requestBody core.Account
+	err := json.NewDecoder(r.Body).Decode(&requestBody)
+	if err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+	}
+
+	//新規ユーザーを作成
+	accounts[float64(requestBody.Number)] = &requestBody
+
+	// レスポンスとして受け取ったデータを返す
+	response := fmt.Sprintf("%v - %v - %v", requestBody.Number, requestBody.Name, requestBody.Balance)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
 }

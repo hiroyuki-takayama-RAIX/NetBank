@@ -1,9 +1,12 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/hiroyuki-takayama-RAIX/core"
@@ -305,4 +308,61 @@ func TestTeapot(t *testing.T) {
 	}
 
 	ListenAndServe(f, teapot, t)
+}
+
+func TestCreateAccount(t *testing.T) {
+	// テストするデータを作成
+	a := &core.Account{
+		Customer: core.Customer{
+			Name:    "Test Account",
+			Address: "Test Address",
+			Phone:   "(0120) 147 147",
+		},
+		Number:  5005,
+		Balance: 0,
+	}
+
+	requestBodyJSON, _ := json.Marshal(a)
+
+	// テスト用のリクエストを作成
+	req, err := http.NewRequest("POST", "/createAccount", bytes.NewBuffer(requestBodyJSON))
+	if err != nil {
+		t.Fatalf("Failed to create request: %v", err)
+	}
+
+	// レスポンスを受け取るためのレコーダーを作成
+	rr := httptest.NewRecorder()
+
+	// サーバーのハンドラーを呼び出し
+	handler := http.HandlerFunc(createAccount)
+
+	handler.ServeHTTP(rr, req)
+
+	// レスポンスを検証
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("Status code mismatch: expected %v, got %v", http.StatusOK, status)
+	}
+
+	// レスポンスボディをパースして検証
+	/*
+			fmt.Println(rr.Body)
+			var response core.Account
+			if err := json.Unmarshal(rr.Body.Bytes(), &response); err != nil {
+				t.Fatalf("Failed to parse response body: %v", err)
+			}
+
+		accountJSON, err := json.Marshal(accounts[5005])
+		if err != nil {
+			t.Fatalf("Failed to parse struct: %v", err)
+		}*/
+
+	if accounts[5005] == a {
+		t.Errorf("Faild to create new account: \ngot :  %v\nwant : %v", accounts[5005], a)
+	}
+
+	expectedBody := "5005 - Test Account - 0\n"
+	responseBody := strings.ReplaceAll(rr.Body.String(), "\"", "")
+	if responseBody != expectedBody {
+		t.Errorf("Response body mismatch: expected %v, got %v", expectedBody, responseBody)
+	}
 }
