@@ -18,7 +18,7 @@ type fixture struct {
 
 // i wanna change this name better...
 // this function get fixture and show test result.
-func ListenAndServe(f *fixture, h func(w http.ResponseWriter, req *http.Request), t *testing.T) {
+func CommonTestLogic(f *fixture, h func(w http.ResponseWriter, req *http.Request), t *testing.T) {
 	req, err := http.NewRequest("GET", f.request, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -98,7 +98,7 @@ func TestStatement(t *testing.T) {
 				Balance: 100,
 			}
 
-			ListenAndServe(f, statement, t)
+			CommonTestLogic(f, statement, t)
 
 		})
 	}
@@ -151,7 +151,7 @@ func TestDeposit(t *testing.T) {
 				Number: 1001,
 			}
 
-			ListenAndServe(f, deposit, t)
+			CommonTestLogic(f, deposit, t)
 		})
 	}
 }
@@ -210,7 +210,7 @@ func TestWithdraw(t *testing.T) {
 				Balance: 20,
 			}
 
-			ListenAndServe(f, withdraw, t)
+			CommonTestLogic(f, withdraw, t)
 		})
 	}
 }
@@ -290,7 +290,7 @@ func TestTransfar(t *testing.T) {
 				Balance: 100,
 			}
 
-			ListenAndServe(f, transfer, t)
+			CommonTestLogic(f, transfer, t)
 		})
 	}
 }
@@ -304,5 +304,5 @@ func TestTeapot(t *testing.T) {
 		expectedBody: "418 : I'm a teapot.\n",
 	}
 
-	ListenAndServe(f, teapot, t)
+	CommonTestLogic(f, teapot, t)
 }
