@@ -312,7 +312,7 @@ func TestTeapot(t *testing.T) {
 	CommonTestLogic(f, teapot, t)
 }
 
-// 学習用テスト
+// tests to comfirm usages of database/sql
 func TestDatabaseSql(t *testing.T) {
 	type account struct {
 		id      int

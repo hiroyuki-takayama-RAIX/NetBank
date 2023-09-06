@@ -4,13 +4,16 @@ version: "3"
 services:
   db:
     image: postgres:14.8
-    container_name: netbank_db
+    container_name: postgres
     ports:
-      - 1234:1234
+      # 1234:1234 caused error saying 'failed to receive message (unexpected EOF)', but why...?
+      - 1234:5432
     volumes:
       - db-store:/var/lib/postgresql/data
       - ./script:/docker-entrypoint-initdb.d
     environment:
+      - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=passw0rd
+      - POSTGRES_DB=netbank
 volumes:
   db-store:
