@@ -1,10 +1,15 @@
 package main
 
 import (
+	"context"
+	"database/sql"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"testing"
+
+	_ "github.com/jackc/pgx/v4/stdlib"
 
 	"github.com/hiroyuki-takayama-RAIX/core"
 )
@@ -305,4 +310,189 @@ func TestTeapot(t *testing.T) {
 	}
 
 	CommonTestLogic(f, teapot, t)
+}
+
+// 学習用テスト
+func TestDatabaseSql(t *testing.T) {
+	type account struct {
+		id      int
+		balance float64
+	}
+
+	type customer struct {
+		id       int
+		username string
+		addr     string
+		phone    string
+	}
+
+	// try to connect db.
+	db, err := sql.Open("pgx", "host=localhost port=1234 user=postgres database=netbank password=passw0rd sslmode=disable")
+	if err != nil {
+		t.Errorf("failed to connect db: %v", err)
+	}
+
+	t.Run("db.Ping()", func(t *testing.T) {
+		// confirme the connection
+		err = db.Ping()
+		if err != nil {
+			t.Errorf("app and db are not connected: %v", err)
+		}
+	})
+
+	t.Run("db.QueryRowContext()", func(t *testing.T) {
+		var (
+			id      int
+			balance float64
+		)
+
+		row := db.QueryRowContext(context.Background(), "SELECT * FROM account")
+		if err != nil {
+			t.Errorf("failed to extract rows from DB: %v", err)
+		}
+
+		err = row.Scan(&id, &balance)
+		if err != nil {
+			t.Errorf("rows.Scan() is failed: %v", err)
+		}
+
+		a := account{
+			id:      id,
+			balance: balance,
+		}
+
+		expected := account{
+			id:      1001,
+			balance: 0,
+		}
+
+		if reflect.DeepEqual(a, expected) == false {
+			t.Errorf("rows mismatch! expected %v, got %v", expected, a)
+		}
+	})
+
+	t.Run("tx.ExecContext() and db.QueryContext()", func(t *testing.T) {
+		// function to check a query is successfully commited or not.
+		getAllRows := func(q string) ([]customer, error) {
+			rows, err := db.QueryContext(context.Background(), q)
+			if err != nil {
+				t.Errorf("query all customer: %v", err)
+				return nil, err
+			}
+			defer rows.Close()
+
+			var customers []customer
+			for rows.Next() {
+				var (
+					id       int
+					username string
+					addr     string
+					phone    string
+				)
+
+				if err := rows.Scan(&id, &username, &addr, &phone); err != nil {
+					t.Errorf("scan the customer: %v", err)
+					return nil, err
+				}
+				customers = append(customers, customer{id: id, username: username, addr: addr, phone: phone})
+
+				if err = rows.Close(); err != nil {
+					t.Errorf("rows close: %v", err)
+					return nil, err
+				}
+				if err = rows.Err(); err != nil {
+					t.Errorf("scan customer: %v", err)
+					return nil, err
+				}
+			}
+			return customers, nil
+		}
+
+		// rows detail to be used as queries and comparisones
+		var (
+			id    = 2002
+			name  = "C.J."
+			addr  = "Los Santos"
+			phone = "(213) 555 0147"
+		)
+
+		// db.Begin() is necessary before quering create, update, and delete.
+		tx, err := db.Begin()
+		if err != nil {
+			t.Errorf("failed to db.Begin(): %v", err)
+			return
+		}
+		// when any kinds of error happens in a transaction, call tx.Rollback() to cancel queries which you execute
+		defer tx.Rollback()
+
+		// check insert statement
+		insertQuery := "INSERT INTO customer (id, username, addr, phone) VALUES ($1, $2, $3, $4);"
+		_, err = tx.ExecContext(context.Background(), insertQuery, id, name, addr, phone)
+		if err != nil {
+			t.Errorf("failed to tx.ExecuteContext(): %v", err)
+			return
+		} else {
+			// to reflect query on DB, call tx.Commit
+			tx.Commit()
+		}
+		cs, _ := getAllRows(fmt.Sprintf("SELECT * FROM customer WHERE id=%v", id))
+		expected := customer{
+			id:       id,
+			username: name,
+			addr:     addr,
+			phone:    phone,
+		}
+		if reflect.DeepEqual(cs[0], expected) == false {
+			t.Errorf("failed to insert rows: %v\n got: %v\n expected: %v\n", err, cs[0], expected)
+		}
+
+		// once you call tx.Commit(), you must call db.Begin() and set tx.Rollback() again
+		tx, err = db.Begin()
+		if err != nil {
+			t.Errorf("failed to db.Begin(): %v", err)
+			return
+		}
+		defer tx.Rollback()
+
+		// check update statement
+		updateQuery := "update customer set phone='(080) 1457 9387' WHERE id=$1;"
+		_, err = tx.ExecContext(context.Background(), updateQuery, id)
+		if err != nil {
+			t.Errorf("failed to tx.ExecuteContext(): %v", err)
+			return
+		} else {
+			tx.Commit()
+		}
+		cs, _ = getAllRows(fmt.Sprintf("SELECT * FROM customer WHERE id=%v", id))
+		expected = customer{
+			id:       id,
+			username: name,
+			addr:     addr,
+			phone:    "(080) 1457 9387",
+		}
+		if reflect.DeepEqual(cs[0], expected) == false {
+			t.Errorf("failed to update rows: %v\n got: %v\n expected: %v\n", err, cs[0], expected)
+		}
+
+		tx, err = db.Begin()
+		if err != nil {
+			t.Errorf("failed to db.Begin(): %v", err)
+			return
+		}
+		defer tx.Rollback()
+
+		// check update statement
+		deleteQuery := "delete FROM customer WHERE id=$1;"
+		_, err = tx.ExecContext(context.Background(), deleteQuery, id)
+		if err != nil {
+			t.Errorf("failed to tx.ExecuteContext(): %v", err)
+			return
+		} else {
+			tx.Commit()
+		}
+		cs, _ = getAllRows(fmt.Sprintf("SELECT * FROM customer WHERE id=%v", id))
+		if len(cs) != 0 {
+			t.Errorf("id 5432 in customer shuould not exist: %v", cs)
+		}
+	})
 }

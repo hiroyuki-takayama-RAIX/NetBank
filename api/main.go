@@ -6,13 +6,14 @@ import (
 	"net/http"
 	"strconv"
 
+	// "_" in import statement means blank import
+	_ "github.com/jackc/pgx/v4/stdlib"
+
 	"github.com/hiroyuki-takayama-RAIX/core"
 )
 
 // cannot use := because account is global
 var accounts = map[float64]*core.Account{}
-
-//
 
 func main() {
 	accounts[1001] = &core.Account{
