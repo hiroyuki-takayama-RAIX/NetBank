@@ -21,17 +21,17 @@ CREATE TABLE customer (
     phone VARCHAR(53)
 );
 
-INSERT INTO customer (id, username, addr, phone) VALUES (1001, 'John', 'Los Angeles, California', '(213) 555 0147');
+-- INSERT INTO customer (id, username, addr, phone) VALUES (1001, 'John', 'Los Angeles, California', '(213) 555 0147');
 
 -- Create the "account" table
 CREATE TABLE account (
   id INT PRIMARY KEY,
-  balance FLOAT
+  balance FLOAT,
   FOREIGN KEY (id) REFERENCES customer(id)
 );
 
 -- Insert sample records
-INSERT INTO account (id, balance) VALUES (1001, 0);
+-- INSERT INTO account (id, balance) VALUES (1001, 0);
 
 -- add privileges on hoge
 -- GRANT ALL PRIVILEGES ON information.account TO hoge;
