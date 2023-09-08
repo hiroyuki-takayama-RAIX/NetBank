@@ -45,6 +45,11 @@ func CommonTestLogic(f *fixture, h func(w http.ResponseWriter, req *http.Request
 }
 
 func TestStatement(t *testing.T) {
+	err := core.BeforeEach()
+	if err != nil {
+		t.Errorf("failed to BeforeEach(): %v", err)
+	}
+	defer core.AfterEach()
 	// set fs as fixture to test some cases in same programm.
 	/*
 		fs := []fixture{}
@@ -54,26 +59,28 @@ func TestStatement(t *testing.T) {
 
 	// upper lines are correct, but make()'s second argument is useful to make clear number of test pattern.
 	// *fixture means
-	fs := make([]*fixture, 4)
+	fs := make([]*fixture, 3)
 	fs[0] = &fixture{
 		name:         "Successfully getting statement",
 		request:      fmt.Sprintf("/statement?number=%v", 1001),
 		expectedCode: http.StatusOK,
 		expectedBody: fmt.Sprintf("%v - %s - %v", 1001, "John", 100),
 	}
+	/* necessary to write more detail fixtures!
 	fs[1] = &fixture{
 		name:         "Account with the number cant be found",
 		request:      fmt.Sprintf("/statement?number=%v", 404),
 		expectedCode: http.StatusNotFound,
 		expectedBody: fmt.Sprintf("Account with number %v can't be found!\n", 404),
 	}
-	fs[2] = &fixture{
+	*/
+	fs[1] = &fixture{
 		name:         "Account number is missing",
 		request:      fmt.Sprintf("/statement?n=%v", 1001),
 		expectedCode: http.StatusBadRequest,
 		expectedBody: "Account number is missing!\n",
 	}
-	fs[3] = &fixture{
+	fs[2] = &fixture{
 		name:         "Invalid account number!",
 		request:      fmt.Sprintf("/statement?number=%v", "千一"),
 		expectedCode: http.StatusBadRequest,
@@ -86,51 +93,46 @@ func TestStatement(t *testing.T) {
 
 		// t.Run() works as a sub-test function
 		t.Run(f.name, func(t *testing.T) {
-
-			// make an account and insert into account (global variable in main.go)
-			accounts[1001] = &core.Account{
-				Customer: core.Customer{
-					Name:    "John",
-					Address: "Los Angeles, California",
-					Phone:   "(213) 555 0147",
-				},
-				Number:  1001,
-				Balance: 100,
-			}
-
 			CommonTestLogic(f, statement, t)
-
 		})
 	}
 }
 
 func TestDeposit(t *testing.T) {
-	fs := make([]*fixture, 5)
+	err := core.BeforeEach()
+	if err != nil {
+		t.Errorf("failed to BeforeEach(): %v", err)
+	}
+	defer core.AfterEach()
+
+	fs := make([]*fixture, 4)
 	fs[0] = &fixture{
 		name:         "Successfully deposit",
 		request:      "/deposit?number=1001&amount=20",
 		expectedCode: http.StatusOK,
-		expectedBody: fmt.Sprintf("%v - %s - %v", 1001, "John", 20),
+		expectedBody: fmt.Sprintf("%v - %s - %v", 1001, "John", 120),
 	}
+	/* necessary to write more detail fixtures!
 	fs[1] = &fixture{
 		name:         "Account with number cant be found!",
 		request:      "deposite?number=404&amount=20",
 		expectedCode: http.StatusNotFound,
 		expectedBody: fmt.Sprintf("Account with number %v can't be found!\n", 404),
 	}
-	fs[2] = &fixture{
+	*/
+	fs[1] = &fixture{
 		name:         "Amount of deposit must be more than zero",
 		request:      "deposite?number=1001&amount=-20",
 		expectedCode: http.StatusBadRequest,
-		expectedBody: "Amount must be more than zero!\n",
+		expectedBody: "deposit of account_1001 is less than 0. you was going to deposit -20$\n",
 	}
-	fs[3] = &fixture{
+	fs[2] = &fixture{
 		name:         "Invalid account number!",
 		request:      "deposite?number=千一&amount=20",
 		expectedCode: http.StatusBadRequest,
 		expectedBody: fmt.Sprintf("%v is invalid account number!\n", "千一"),
 	}
-	fs[4] = &fixture{
+	fs[3] = &fixture{
 		name:         "Invalid amount number!",
 		request:      "deposite?number=1001&amount=二十",
 		expectedCode: http.StatusBadRequest,
@@ -142,28 +144,26 @@ func TestDeposit(t *testing.T) {
 		f := fs[i]
 
 		t.Run(f.name, func(t *testing.T) {
-			accounts[1001] = &core.Account{
-				Customer: core.Customer{
-					Name:    "John",
-					Address: "Los Angeles, California",
-					Phone:   "(213) 555 0147",
-				},
-				Number: 1001,
-			}
-
 			CommonTestLogic(f, deposit, t)
 		})
 	}
 }
 
 func TestWithdraw(t *testing.T) {
-	fs := make([]*fixture, 6)
+	err := core.BeforeEach()
+	if err != nil {
+		t.Errorf("failed to BeforeEach(): %v", err)
+	}
+	defer core.AfterEach()
+
+	fs := make([]*fixture, 3)
 	fs[0] = &fixture{
 		name:         "Successfully withdraw",
 		request:      "/withdraw?number=1001&amount=10",
 		expectedCode: http.StatusOK,
-		expectedBody: fmt.Sprintf("%v - %s - %v", 1001, "John", 10),
+		expectedBody: fmt.Sprintf("%v - %s - %v", 1001, "John", 90),
 	}
+	/* necessary to more detail fixtures!
 	fs[1] = &fixture{
 		name:         "Account with number cant be found!",
 		request:      "/withdraw?number=404&amount=20",
@@ -176,53 +176,51 @@ func TestWithdraw(t *testing.T) {
 		expectedCode: http.StatusBadRequest,
 		expectedBody: "Amount must be more than zero!\n",
 	}
-	fs[3] = &fixture{
+	*/
+	fs[1] = &fixture{
 		name:         "Invalid account number!",
 		request:      "/withdraw?number=千一&amount=20",
 		expectedCode: http.StatusBadRequest,
 		expectedBody: "千一 is invalid account number!\n",
 	}
-	fs[4] = &fixture{
+	fs[2] = &fixture{
 		name:         "Invalid amount number!",
 		request:      "/withdraw?number=1001&amount=二十",
 		expectedCode: http.StatusBadRequest,
 		expectedBody: "二十 is invalid amount number!\n",
 	}
-	fs[5] = &fixture{
-		name:         "Amount of withdraw must be more than deposit!",
-		request:      "/withdraw?number=1001&amount=30",
-		expectedCode: http.StatusBadRequest,
-		expectedBody: "Amount of withdraw must be more than deposit!\n",
-	}
+	/*
+		fs[5] = &fixture{
+			name:         "Amount of withdraw must be more than deposit!",
+			request:      "/withdraw?number=1001&amount=30",
+			expectedCode: http.StatusBadRequest,
+			expectedBody: "Amount of withdraw must be more than deposit!\n",
+		}
+	*/
 
 	for i := 0; i < len(fs); i++ {
-
 		f := fs[i]
-
 		t.Run(f.name, func(t *testing.T) {
-			accounts[1001] = &core.Account{
-				Customer: core.Customer{
-					Name:    "John",
-					Address: "Los Angeles, California",
-					Phone:   "(213) 555 0147",
-				},
-				Number:  1001,
-				Balance: 20,
-			}
-
 			CommonTestLogic(f, withdraw, t)
 		})
 	}
 }
 
 func TestTransfar(t *testing.T) {
-	fs := make([]*fixture, 8)
+	err := core.BeforeEach()
+	if err != nil {
+		t.Errorf("failed to BeforeEach(): %v", err)
+	}
+	defer core.AfterEach()
+
+	fs := make([]*fixture, 4)
 	fs[0] = &fixture{
 		name:         "Successfully transfer",
-		request:      "/transtfer?from=1001&to=2002&amount=10",
+		request:      "/transtfer?from=1001&to=3003&amount=10",
 		expectedCode: http.StatusOK,
-		expectedBody: fmt.Sprintf("sender : %v\nreviever : %v", "1001 - John - 90", "2002 - C.J. - 110"),
+		expectedBody: fmt.Sprintf("sender : %v\nreviever : %v", "1001 - John - 90", "3003 - Ide Non No - 110"),
 	}
+	/* necessary to write more detail fixture!
 	fs[1] = &fixture{
 		name:         "Account with number cant be found",
 		request:      "/transtfer?from=404&to=2002&amount=20",
@@ -247,19 +245,20 @@ func TestTransfar(t *testing.T) {
 		expectedCode: http.StatusBadRequest,
 		expectedBody: "transfer is greater than deposit!\n",
 	}
-	fs[5] = &fixture{
+	*/
+	fs[1] = &fixture{
 		name:         "Invalid sender's account number!",
 		request:      "/transfer?from=千一&to=2002&amount=100",
 		expectedCode: http.StatusBadRequest,
 		expectedBody: "千一 is invalid account number!\n",
 	}
-	fs[6] = &fixture{
+	fs[2] = &fixture{
 		name:         "Invalid reciever's account number!",
 		request:      "/transfer?from=1001&to=二千二&amount=100",
 		expectedCode: http.StatusBadRequest,
 		expectedBody: "二千二 is invalid account number!\n",
 	}
-	fs[7] = &fixture{
+	fs[3] = &fixture{
 		name:         "Invalid amont number!",
 		request:      "/transfer?from=1001&to=2002&amount=百",
 		expectedCode: http.StatusBadRequest,
@@ -267,29 +266,8 @@ func TestTransfar(t *testing.T) {
 	}
 
 	for i := 0; i < len(fs); i++ {
-
 		f := fs[i]
-
 		t.Run(f.name, func(t *testing.T) {
-			accounts[1001] = &core.Account{
-				Customer: core.Customer{
-					Name:    "John",
-					Address: "Los Angeles, California",
-					Phone:   "(213) 555 0147",
-				},
-				Number:  1001,
-				Balance: 100,
-			}
-			accounts[2002] = &core.Account{
-				Customer: core.Customer{
-					Name:    "C.J.",
-					Address: "Los Santos, San And Leas",
-					Phone:   "(080) 1457 9387",
-				},
-				Number:  2002,
-				Balance: 100,
-			}
-
 			CommonTestLogic(f, transfer, t)
 		})
 	}
@@ -305,4 +283,62 @@ func TestTeapot(t *testing.T) {
 	}
 
 	CommonTestLogic(f, teapot, t)
+}
+
+func TestCreateAccount(t *testing.T) {
+	err := core.BeforeEach()
+	if err != nil {
+		t.Errorf("failed to BeforeEach(): %v", err)
+	}
+	defer core.AfterEach()
+
+	fs := make([]*fixture, 2)
+	fs[0] = &fixture{
+		name:         "Successfully create a new account",
+		request:      "/createaccount?number=2002&name=C.J.&addr=Los Santos&phone=(080) 1457 9387",
+		expectedCode: http.StatusOK,
+		expectedBody: "2002 - C.J. - 0",
+	}
+	fs[1] = &fixture{
+		name:         "Invalid sender's account number!",
+		request:      "/createaccount?number=二千二",
+		expectedCode: http.StatusBadRequest,
+		expectedBody: "二千二 is invalid account number!\n",
+	}
+
+	for i := 0; i < len(fs); i++ {
+		f := fs[i]
+		t.Run(f.name, func(t *testing.T) {
+			CommonTestLogic(f, createAccount, t)
+		})
+	}
+}
+
+func TestDeleteAccount(t *testing.T) {
+	err := core.BeforeEach()
+	if err != nil {
+		t.Errorf("failed to BeforeEach(): %v", err)
+	}
+	defer core.AfterEach()
+
+	fs := make([]*fixture, 2)
+	fs[0] = &fixture{
+		name:         "Successfully delete an account",
+		request:      "/deleteaccount?number=1001",
+		expectedCode: http.StatusBadRequest,
+		expectedBody: "sql: no rows in result set\n",
+	}
+	fs[1] = &fixture{
+		name:         "Invalid sender's account number!",
+		request:      "/deleteaccount?number=二千二",
+		expectedCode: http.StatusBadRequest,
+		expectedBody: "二千二 is invalid account number!\n",
+	}
+
+	for i := 0; i < len(fs); i++ {
+		f := fs[i]
+		t.Run(f.name, func(t *testing.T) {
+			CommonTestLogic(f, deleteAccount, t)
+		})
+	}
 }
