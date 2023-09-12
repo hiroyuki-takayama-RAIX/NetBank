@@ -22,6 +22,9 @@ func main() {
 	http.HandleFunc("/createaccount", createAccount)
 	http.HandleFunc("/deleteaccount", deleteAccount)
 
+	// API URL の設計を見直す
+	// path parameter, query parameter, body parameter
+
 	fmt.Println("Server is running")
 
 	// log.fatal show you log with date_time
@@ -106,7 +109,7 @@ func withdraw(w http.ResponseWriter, req *http.Request) {
 		err := core.NewNetBank().Withdraw(number, amount)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("%v", err), http.StatusBadRequest)
-
+		} else {
 			// below lines are error handling of amountqs
 			s, err := core.NewNetBank().Statement(number)
 			if err != nil {

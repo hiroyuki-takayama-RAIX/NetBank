@@ -1,13 +1,39 @@
+<core package 関連>
 [x] statementメソッドで"select * from ~"ができるようにする
   [x] "*JOIN ~" のクエリでどのような挙動をするか確認する
 [x] depositeメソッドで"update * ~" ができるようにする
 [x] widhdrawメソッドで"update * ~" ができるようにする
 [x] transferメソッドで"update * ~"　ができるようにする
 [x] Accountのメソッドを削除する
-
 [x] createAccountメソッドを作り、"insert *"ができるようにする
 [x] deleteAccountメソッドを作り、"delete *"が出るようにする
   [-] 存在しないidのaccountの明細を出そうとしたらエラー分が表示されるようにする
+[x] テストコードにbeforeEach を作成
+[x] テストコードにafterEach を作成
 
-[x] beforeEach を作成
-[x] afterEach を作成
+<api package 関連>
+[x] statement関数を改良
+[x] deposit関数を改良
+[x] withdraw関数を改良
+[x] transfer関数を改良
+[] createAccount関数を改良
+[] deleteAccount関数を改良
+
+<crudやること>
+[x] withdrawのエラーを解消する
+
+<env>
+[] unitテスト用のテーブル、本番用のテーブルを作成する
+[] main.goをコンテナ上で起動できるようにする
+[] サーバー起動時に毎回任意のポート番号を割り当てるようにする
+
+<urlでやること>
+[] createAccountの改修
+    [] リクエストのクエリパラメーターをボディパラメーターに変更
+    [] account.idに存在しないIDを任意に割り当てる方式に変更する(POST)
+    [] リソースの作成に成功したら、IDと仮パスワードをレスポンスとして返すようにする。
+[] statementの改修
+[] depositeの改修
+[] withdrawの改修
+[] transferの改修
+[] deleteAccountの改修 

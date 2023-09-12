@@ -30,11 +30,11 @@ func TestNewNetBank(t *testing.T) {
 }
 
 func TestCreateAccount(t *testing.T) {
-	err := beforeEach()
+	err := BeforeEach()
 	if err != nil {
-		t.Errorf("failed to beforeEach(): %v", err)
+		t.Errorf("failed to BeforeEach(): %v", err)
 	}
-	defer afterEach()
+	defer AfterEach()
 
 	nb := netBank{}
 	id := 2002
@@ -59,11 +59,11 @@ func TestCreateAccount(t *testing.T) {
 }
 
 func TestDeleteAccount(t *testing.T) {
-	err := beforeEach()
+	err := BeforeEach()
 	if err != nil {
-		t.Errorf("failed to beforeEach(): %v", err)
+		t.Errorf("failed to BeforeEach(): %v", err)
 	}
-	defer afterEach()
+	defer AfterEach()
 
 	nb := netBank{}
 	id := 2002
@@ -80,11 +80,11 @@ func TestDeleteAccount(t *testing.T) {
 }
 
 func TestDeposit(t *testing.T) {
-	err := beforeEach()
+	err := BeforeEach()
 	if err != nil {
-		t.Errorf("failed to beforeEach(): %v", err)
+		t.Errorf("failed to BeforeEach(): %v", err)
 	}
-	defer afterEach()
+	defer AfterEach()
 
 	nb := netBank{}
 	id := 1001
@@ -109,11 +109,11 @@ func TestDeposit(t *testing.T) {
 // Invalid pattern test
 
 func TestWithdraw(t *testing.T) {
-	err := beforeEach()
+	err := BeforeEach()
 	if err != nil {
 		t.Errorf("failed to setup talbes: %v", err)
 	}
-	defer afterEach()
+	defer AfterEach()
 
 	id := 1001
 	money := float64(100)
@@ -136,11 +136,11 @@ func TestWithdraw(t *testing.T) {
 }
 
 func TestTransfer(t *testing.T) {
-	err := beforeEach()
+	err := BeforeEach()
 	if err != nil {
-		t.Errorf("failed to beforeEach(): %v", err)
+		t.Errorf("failed to BeforeEach(): %v", err)
 	}
-	defer afterEach()
+	defer AfterEach()
 
 	nb := NewNetBank()
 	sender_id := 1001
@@ -172,11 +172,11 @@ func TestTransfer(t *testing.T) {
 }
 
 func TestStatement(t *testing.T) {
-	err := beforeEach()
+	err := BeforeEach()
 	if err != nil {
-		t.Errorf("failed to beforeEach(): %v", err)
+		t.Errorf("failed to BeforeEach(): %v", err)
 	}
-	defer afterEach()
+	defer AfterEach()
 
 	nb := NewNetBank()
 	id := 1001
@@ -205,11 +205,11 @@ type customer struct {
 }
 
 func TestDatabaseSql(t *testing.T) {
-	err := beforeEach()
+	err := BeforeEach()
 	if err != nil {
 		t.Errorf("failed to setup tables: %v", err)
 	}
-	defer afterEach()
+	defer AfterEach()
 
 	t.Run("db.Ping()", func(t *testing.T) {
 		// confirme the connection with db.Ping()
@@ -311,7 +311,10 @@ func TestDatabaseSql(t *testing.T) {
 		defer tx.Rollback()
 
 		// check insert statement
-		q := "INSERT INTO customer (id, username, addr, phone) VALUES ($1, $2, $3, $4);"
+		q := `
+		INSERT INTO customer (id, username, addr, phone) 
+		VALUES ($1, $2, $3, $4);
+		`
 		_, err = tx.ExecContext(context.Background(), q, id, name, addr, phone)
 		if err != nil {
 			t.Errorf("failed to tx.ExecuteContext(): %v", err)
@@ -342,7 +345,11 @@ func TestDatabaseSql(t *testing.T) {
 		defer tx.Rollback()
 
 		// check update statement
-		q := "update customer set phone='(080) 1457 9387' WHERE id=$1;"
+		q := `
+		UPDATE customer
+		SET phone='(080) 1457 9387' 
+		WHERE id=$1;
+		`
 		_, err = tx.ExecContext(context.Background(), q, id)
 		if err != nil {
 			t.Errorf("failed to tx.ExecuteContext(): %v", err)
@@ -402,7 +409,13 @@ func TestDatabaseSql(t *testing.T) {
 			phone   string
 		)
 
-		q := "SELECT account.id, balance, username, addr, phone FROM account INNER JOIN customer ON account.id=customer.id WHERE account.id=1001;"
+		q := `
+		SELECT account.id, balance, username, addr, phone 
+		FROM account 
+		INNER JOIN customer 
+		ON account.id=customer.id 
+		WHERE account.id=1001;
+		`
 		row := db.QueryRowContext(context.Background(), q)
 		err := row.Scan(&id, &balance, &name, &addr, &phone)
 		if err != nil {

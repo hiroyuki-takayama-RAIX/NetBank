@@ -6,7 +6,7 @@ import (
 
 // insert fows to tables and delete all rows on each test.
 
-func beforeEach() error {
+func BeforeEach() error {
 	tx, err := db.Begin()
 	if err != nil {
 		return err
@@ -29,7 +29,7 @@ func beforeEach() error {
 	return nil
 }
 
-func afterEach() error {
+func AfterEach() error {
 	tx, err := db.Begin()
 	if err != nil {
 		return err
