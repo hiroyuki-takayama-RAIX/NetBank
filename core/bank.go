@@ -22,9 +22,9 @@ func init() {
 
 // Customer ...
 type Customer struct {
-	Name    string
-	Address string
-	Phone   string
+	Name    string `json:"name"`
+	Address string `json:"address"`
+	Phone   string `json:"phone"`
 }
 
 // Account ...
