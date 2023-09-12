@@ -1,42 +1,33 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"strconv"
 
+	// "_" in import statement means blank import
+	_ "github.com/jackc/pgx/v4/stdlib"
+
 	"github.com/hiroyuki-takayama-RAIX/core"
 )
 
-// cannot use := because account is global
-var accounts = map[float64]*core.Account{}
-
-//
-
 func main() {
-	accounts[1001] = &core.Account{
-		Customer: core.Customer{
-			Name:    "John",
-			Address: "Los Angeles, California",
-			Phone:   "(213) 555 0147",
-		},
-		Number: 1001,
-	}
-
 	// set statment as handler function in path
-	// REST API は各リソースをURIという識別子で示し、これらに対してGETやPOSTといったメソッドを使用してリクエストを送る。
-	// http.HandleFunc() はリクエストの状態の保持をしておらず、リクエストを処理しているだけ。
 	http.HandleFunc("/statement", statement)
 	http.HandleFunc("/withdraw", withdraw)
 	http.HandleFunc("/deposit", deposit)
 	http.HandleFunc("/transfer", transfer)
 	http.HandleFunc("/teapot", teapot)
-	http.HandleFunc("/createAccount", createAccount)
+	http.HandleFunc("/createaccount", createAccount)
+	http.HandleFunc("/deleteaccount", deleteAccount)
+
+	// API URL の設計を見直す
+	// path parameter, query parameter, body parameter
+
+	fmt.Println("Server is running")
 
 	// log.fatal show you log with date_time
-	// REST API は HTTP Protocol を使用した通信を行う。
 	log.Fatal(http.ListenAndServe("localhost:8000", nil))
 }
 
@@ -57,14 +48,14 @@ func statement(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// parse request
-	if number, err := strconv.ParseFloat(numberqs, 64); err != nil {
+	if number, err := strconv.Atoi(numberqs); err != nil {
 		http.Error(w, fmt.Sprintf("%v is invalid account number!", numberqs), http.StatusBadRequest)
 	} else {
-		account, ok := accounts[number]
-		if !ok {
-			http.Error(w, fmt.Sprintf("Account with number %v can't be found!", number), http.StatusNotFound)
+		s, err := core.NewNetBank().Statement(number)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("%v", err), http.StatusNotFound)
 		} else {
-			fmt.Fprintf(w, "%v", account.Statement())
+			fmt.Fprintf(w, "%v", s)
 		}
 	}
 }
@@ -79,22 +70,21 @@ func deposit(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if number, err := strconv.ParseFloat(numberqs, 64); err != nil {
+	if number, err := strconv.Atoi(numberqs); err != nil {
 		http.Error(w, fmt.Sprintf("%v is invalid account number!", numberqs), http.StatusBadRequest)
 	} else if amount, err := strconv.ParseFloat(amountqs, 64); err != nil {
 		http.Error(w, fmt.Sprintf("%v is invalid amount number!", amountqs), http.StatusBadRequest)
 	} else {
-		account, ok := accounts[number]
-		if !ok {
-			http.Error(w, fmt.Sprintf("Account with number %v can't be found!", number), http.StatusNotFound)
-
+		err := core.NewNetBank().Deposit(number, amount)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("%v", err), http.StatusBadRequest)
 		} else {
 			//when amount is less than zero, error is not nil.
-			err := account.Deposit(amount)
+			s, err := core.NewNetBank().Statement(number)
 			if err != nil {
-				http.Error(w, fmt.Sprintf("%v", err), http.StatusBadRequest)
+				http.Error(w, fmt.Sprintf("%v", err), http.StatusNotFound)
 			} else {
-				fmt.Fprintf(w, "%v", account.Statement())
+				fmt.Fprintf(w, "%v", s)
 			}
 		}
 	}
@@ -111,22 +101,21 @@ func withdraw(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// below lines are error handlings of numberqs
-	if number, err := strconv.ParseFloat(numberqs, 64); err != nil {
+	if number, err := strconv.Atoi(numberqs); err != nil {
 		http.Error(w, fmt.Sprintf("%v is invalid account number!", numberqs), http.StatusBadRequest)
 	} else if amount, err := strconv.ParseFloat(amountqs, 64); err != nil {
 		http.Error(w, fmt.Sprintf("%v is invalid amount number!", amountqs), http.StatusBadRequest)
 	} else {
-		account, ok := accounts[number]
-		if !ok {
-			http.Error(w, fmt.Sprintf("Account with number %v can't be found!", number), http.StatusNotFound)
-
-			// below lines are error handling of amountqs
+		err := core.NewNetBank().Withdraw(number, amount)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("%v", err), http.StatusBadRequest)
 		} else {
-			err := account.Withdraw(amount)
+			// below lines are error handling of amountqs
+			s, err := core.NewNetBank().Statement(number)
 			if err != nil {
 				http.Error(w, fmt.Sprintf("%v", err), http.StatusBadRequest)
 			} else {
-				fmt.Fprintf(w, "%v", account.Statement())
+				fmt.Fprintf(w, "%v", s)
 			}
 		}
 	}
@@ -149,26 +138,28 @@ func transfer(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// below lines are error handlings of numberqs
-	if senderNumber, err := strconv.ParseFloat(senderNumberqs, 64); err != nil {
+	if senderNumber, err := strconv.Atoi(senderNumberqs); err != nil {
 		http.Error(w, fmt.Sprintf("%v is invalid account number!", senderNumberqs), http.StatusBadRequest)
-	} else if recieverNumber, err := strconv.ParseFloat(recieverNumberqs, 64); err != nil {
+	} else if recieverNumber, err := strconv.Atoi(recieverNumberqs); err != nil {
 		http.Error(w, fmt.Sprintf("%v is invalid account number!", recieverNumberqs), http.StatusBadRequest)
 	} else if amount, err := strconv.ParseFloat(amountqs, 64); err != nil {
 		http.Error(w, fmt.Sprintf("%v is invalid amount number!", amountqs), http.StatusBadRequest)
 	} else {
-		sender, senderOk := accounts[senderNumber]
-		reciever, recieverOk := accounts[recieverNumber]
-		if !senderOk {
-			http.Error(w, fmt.Sprintf("Account of sender with number %v can't be found!", senderNumber), http.StatusNotFound)
-		} else if !recieverOk {
-			http.Error(w, fmt.Sprintf("Account of reciever with number %v can't be found!", recieverNumber), http.StatusNotFound)
+		err := core.NewNetBank().Transfer(senderNumber, recieverNumber, amount)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("%v", err), http.StatusNotFound)
 			// below lines are error handling of amountqs
 		} else {
-			err := sender.Transfer(reciever, amount)
+			sender, err := core.NewNetBank().Statement(senderNumber)
 			if err != nil {
 				http.Error(w, fmt.Sprintf("%v", err), http.StatusBadRequest)
 			} else {
-				fmt.Fprintf(w, "sender : %v\nreviever : %v", sender.Statement(), reciever.Statement())
+				reciever, err := core.NewNetBank().Statement(recieverNumber)
+				if err != nil {
+					http.Error(w, fmt.Sprintf("%v", err), http.StatusBadRequest)
+				} else {
+					fmt.Fprintf(w, "sender : %v\nreviever : %v", sender, reciever)
+				}
 			}
 		}
 	}
@@ -178,24 +169,61 @@ func teapot(w http.ResponseWriter, r *http.Request) {
 	http.Error(w, "418 : I'm a teapot.", http.StatusTeapot)
 }
 
-func createAccount(w http.ResponseWriter, r *http.Request) {
-	// リクエストメソッドがPOSTでない場合はエラーを返す
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+func createAccount(w http.ResponseWriter, req *http.Request) {
+	// parse request
+	numberqs := req.URL.Query().Get("number")
+	name := req.URL.Query().Get("name")
+	addr := req.URL.Query().Get("addr")
+	phone := req.URL.Query().Get("phone")
+
+	if numberqs == "" {
+		// http.ResponseWriter is io.Writer interface and Fprintf() write data into io.Writer interface.
+		http.Error(w, "Account number is missing!", http.StatusBadRequest)
+		return
 	}
 
-	// リクエストのボディをパースしてデータを取得
-	var requestBody core.Account
-	err := json.NewDecoder(r.Body).Decode(&requestBody)
-	if err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+	// parse request
+	if number, err := strconv.Atoi(numberqs); err != nil {
+		http.Error(w, fmt.Sprintf("%v is invalid account number!", numberqs), http.StatusBadRequest)
+	} else {
+		err := core.NewNetBank().CreateAccount(number, name, addr, phone)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("%v", err), http.StatusNotFound)
+		} else {
+			s, err := core.NewNetBank().Statement(number)
+			if err != nil {
+				http.Error(w, fmt.Sprintf("%v", err), http.StatusBadRequest)
+			} else {
+				fmt.Fprintf(w, "%v", s)
+			}
+		}
+	}
+}
+
+func deleteAccount(w http.ResponseWriter, req *http.Request) {
+	// parse request
+	numberqs := req.URL.Query().Get("number")
+
+	if numberqs == "" {
+		// http.ResponseWriter is io.Writer interface and Fprintf() write data into io.Writer interface.
+		http.Error(w, "Account number is missing!", http.StatusBadRequest)
+		return
 	}
 
-	//新規ユーザーを作成
-	accounts[float64(requestBody.Number)] = &requestBody
-
-	// レスポンスとして受け取ったデータを返す
-	response := fmt.Sprintf("%v - %v - %v", requestBody.Number, requestBody.Name, requestBody.Balance)
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	// parse request
+	if number, err := strconv.Atoi(numberqs); err != nil {
+		http.Error(w, fmt.Sprintf("%v is invalid account number!", numberqs), http.StatusBadRequest)
+	} else {
+		err := core.NewNetBank().DeleteAccount(number)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("%v", err), http.StatusNotFound)
+		} else {
+			s, err := core.NewNetBank().Statement(number)
+			if err != nil {
+				http.Error(w, fmt.Sprintf("%v", err), http.StatusBadRequest)
+			} else {
+				fmt.Fprintf(w, "%v", s)
+			}
+		}
+	}
 }
