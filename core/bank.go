@@ -49,7 +49,11 @@ func (nb *netBank) Deposit(num int, money float64) error {
 
 	// extract the account's balance
 	var balance float64
-	q := `SELECT balance FROM account WHERE id=$1;`
+	q := `
+	SELECT balance 
+	FROM account 
+	WHERE id=$1;
+	`
 	row := db.QueryRowContext(context.Background(), q, num)
 	err := row.Scan(&balance)
 	if err != nil {
@@ -69,7 +73,11 @@ func (nb *netBank) Deposit(num int, money float64) error {
 	defer tx.Rollback()
 
 	// update the balance
-	q = "UPDATE account SET balance=$1 WHERE id=$2;"
+	q = `
+	UPDATE account 
+	SET balance=$1 
+	WHERE id=$2;
+	`
 	_, err = tx.ExecContext(context.Background(), q, money+balance, num)
 	if err != nil {
 		return err
@@ -87,7 +95,11 @@ func (nb *netBank) Withdraw(num int, money float64) error {
 
 	// extract the account's balance
 	var balance float64
-	q := `SELECT balance FROM account WHERE id=$1;`
+	q := `
+	SELECT balance 
+	FROM account 
+	WHERE id=$1;
+	`
 	row := db.QueryRowContext(context.Background(), q, num)
 	err := row.Scan(&balance)
 	if err != nil {
@@ -111,7 +123,11 @@ func (nb *netBank) Withdraw(num int, money float64) error {
 	defer tx.Rollback()
 
 	// update the balance
-	q = "UPDATE account SET balance=$1 WHERE id=$2;"
+	q = `
+	UPDATE account 
+	SET balance=$1 
+	WHERE id=$2;
+	`
 	_, err = tx.ExecContext(context.Background(), q, balance-money, num)
 	if err != nil {
 		return err
@@ -131,7 +147,8 @@ func (nb *netBank) Statement(num int) (string, error) {
 
 	q := `SELECT account.id, balance, username 
 	      FROM account 
-		  INNER JOIN customer ON account.id=customer.id 
+		  INNER JOIN customer 
+		  ON account.id=customer.id 
 		  WHERE account.id=$1;`
 	row := db.QueryRowContext(context.Background(), q, num)
 	err := row.Scan(&id, &balance, &name)
@@ -155,7 +172,11 @@ func (nb *netBank) Transfer(sender int, reciever int, money float64) error {
 
 	/*--- validation of sender ---*/
 	var senderBalance float64
-	senderQuery := `SELECT balance FROM account WHERE id=$1;`
+	senderQuery := `
+	SELECT balance 
+	FROM account 
+	WHERE id=$1;
+	`
 	senderRow := db.QueryRowContext(context.Background(), senderQuery, sender)
 	err := senderRow.Scan(&senderBalance)
 	if err != nil {
@@ -245,12 +266,18 @@ func (nb *netBank) DeleteAccount(num int) error {
 	defer tx.Rollback()
 
 	// update the balance
-	q := `DELETE FROM account WHERE id=$1;`
+	q := `
+	DELETE FROM account 
+	WHERE id=$1;
+	`
 	_, err = tx.ExecContext(context.Background(), q, num)
 	if err != nil {
 		return err
 	} else {
-		q := `DELETE FROM customer WHERE id=$1;`
+		q := `
+		DELETE FROM customer 
+		WHERE id=$1;
+		`
 		_, err = tx.ExecContext(context.Background(), q, num)
 		if err != nil {
 			return err
