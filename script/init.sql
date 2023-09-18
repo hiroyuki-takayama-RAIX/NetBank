@@ -13,7 +13,7 @@ CREATE TABLE customer (
 CREATE TABLE account (
   id INT PRIMARY KEY,
   balance FLOAT,
-  FOREIGN KEY (id) REFERENCES unitTest.customer(id)
+  FOREIGN KEY (id) REFERENCES customer(id)
 );
 
 -- create tables for production code

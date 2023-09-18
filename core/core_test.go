@@ -3,7 +3,6 @@ package core
 // without import bank.go, you can use objects ans functions because core_test.go and bank.go are in the same module.
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"reflect"
 	"testing"
@@ -12,6 +11,7 @@ import (
 )
 
 // init is used to assign to db as global variable
+/*
 func init() {
 	var err error
 	db, err = sql.Open("pgx", "host=localhost port=1234 user=postgres database=netbank password=passw0rd sslmode=disable")
@@ -20,6 +20,7 @@ func init() {
 		// You can choose to exit or handle the error accordingly.
 	}
 }
+*/
 
 func TestNewNetBank(t *testing.T) {
 	got := NewNetBank()

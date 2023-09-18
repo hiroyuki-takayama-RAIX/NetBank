@@ -13,7 +13,7 @@ var db *sql.DB
 // init is used to assign to db as global variable
 func init() {
 	var err error
-	db, err = sql.Open("pgx", "host=localhost port=1234 user=postgres database=netbank password=passw0rd sslmode=disable")
+	db, err = sql.Open("pgx", "host=localhost port=5180 user=testUser database=netbank_test password=testPassword sslmode=disable")
 	if err != nil {
 		fmt.Printf("failed to connect db: %v\n", err)
 		// You can choose to exit or handle the error accordingly.
