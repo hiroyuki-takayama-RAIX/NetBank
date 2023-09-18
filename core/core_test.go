@@ -13,7 +13,7 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	err := connectTestDB()
+	err := ConnectTestDB()
 	if err != nil {
 		msg := fmt.Sprintf("failed to connect test db: %v", err)
 		panic(msg)
@@ -21,7 +21,7 @@ func TestMain(m *testing.M) {
 
 	code := m.Run()
 
-	err = disconnectTestDB()
+	err = DisconnectTestDB()
 	if err != nil {
 		msg := fmt.Sprintf("failed to disconnect test db: %v", err)
 		panic(msg)
@@ -31,11 +31,11 @@ func TestMain(m *testing.M) {
 }
 
 func TestBegin(t *testing.T) {
-	err := insertTestData()
+	err := InsertTestData()
 	if err != nil {
 		t.Errorf("failed to insert test data: %v", err)
 	}
-	defer deleteTestData()
+	defer DeleteTestData()
 
 	tx, err := tnb.Begin()
 	if err != nil {
@@ -68,7 +68,7 @@ func TestBegin(t *testing.T) {
 }
 
 func TestNewNetBank(t *testing.T) {
-	got, err := NewNetBank(driver, source)
+	got, err := NewNetBank()
 	if err != nil {
 		t.Errorf("failed to genetare a new netBank instance: %v", err)
 	}
@@ -91,11 +91,11 @@ func TestNewNetBank(t *testing.T) {
 }
 
 func TestCreateAccount(t *testing.T) {
-	err := insertTestData()
+	err := InsertTestData()
 	if err != nil {
 		t.Errorf("failed to insert test data: %v", err)
 	}
-	defer deleteTestData()
+	defer DeleteTestData()
 
 	id := 2002
 	name := "C.J."
@@ -119,11 +119,11 @@ func TestCreateAccount(t *testing.T) {
 }
 
 func TestDeleteAccount(t *testing.T) {
-	err := insertTestData()
+	err := InsertTestData()
 	if err != nil {
 		t.Errorf("failed to insertTestData(): %v", err)
 	}
-	defer deleteTestData()
+	defer DeleteTestData()
 
 	id := 2002
 
@@ -139,11 +139,11 @@ func TestDeleteAccount(t *testing.T) {
 }
 
 func TestDeposit(t *testing.T) {
-	err := insertTestData()
+	err := InsertTestData()
 	if err != nil {
 		t.Errorf("failed to insertTestData(): %v", err)
 	}
-	defer deleteTestData()
+	defer DeleteTestData()
 
 	id := 1001
 	money := float64(100)
@@ -167,11 +167,11 @@ func TestDeposit(t *testing.T) {
 // Invalid pattern test
 
 func TestWithdraw(t *testing.T) {
-	err := insertTestData()
+	err := InsertTestData()
 	if err != nil {
 		t.Errorf("failed to setup talbes: %v", err)
 	}
-	defer deleteTestData()
+	defer DeleteTestData()
 
 	id := 1001
 	money := float64(100)
@@ -193,11 +193,11 @@ func TestWithdraw(t *testing.T) {
 }
 
 func TestTransfer(t *testing.T) {
-	err := insertTestData()
+	err := InsertTestData()
 	if err != nil {
 		t.Errorf("failed to insertTestData(): %v", err)
 	}
-	defer deleteTestData()
+	defer DeleteTestData()
 
 	sender_id := 1001
 	reciever_id := 3003
@@ -228,11 +228,11 @@ func TestTransfer(t *testing.T) {
 }
 
 func TestStatement(t *testing.T) {
-	err := insertTestData()
+	err := InsertTestData()
 	if err != nil {
 		t.Errorf("failed to insertTestData(): %v", err)
 	}
-	defer deleteTestData()
+	defer DeleteTestData()
 
 	id := 1001
 	s, err := tnb.Statement(1001)
@@ -259,17 +259,24 @@ type customer struct {
 	phone    string
 }
 
+// test to learning database/sql
 func TestDatabaseSql(t *testing.T) {
 	var (
-		db  *sql.DB
-		err error
+		db     *sql.DB
+		driver string
+		source string
+		err    error
 	)
 
-	err = insertTestData()
+	err = InsertTestData()
 	if err != nil {
 		t.Errorf("failed to setup tables: %v", err)
 	}
-	defer deleteTestData()
+	defer DeleteTestData()
+
+	// its so hardcoding, need to modify!
+	driver = "pgx"
+	source = "host=localhost port=5180 user=testUser database=netbank_test password=testPassword sslmode=disable"
 
 	db, err = sql.Open(driver, source)
 	if err != nil {

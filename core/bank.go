@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"os"
 
 	_ "github.com/jackc/pgx/v4/stdlib"
 )
@@ -26,7 +27,25 @@ type netBank struct {
 	db *sql.DB
 }
 
-func NewNetBank(driver string, source string) (*netBank, error) {
+func NewNetBank() (*netBank, error) {
+	env := os.Getenv("Env")
+
+	var (
+		driver string
+		source string
+	)
+
+	if env == "test" {
+		driver = "pgx"
+		source = "host=localhost port=5180 user=testUser database=netbank_test password=testPassword sslmode=disable"
+	} else if env == "prod" {
+		driver = "pgx"
+		source = "host=localhost port=1234 user=postgres database=netbank password=postgres sslmode=disable"
+	} else {
+		msg := fmt.Sprintf("invaild environment valiable %v", env)
+		panic(msg)
+	}
+
 	db, err := sql.Open(driver, source)
 	if err != nil {
 		return nil, err

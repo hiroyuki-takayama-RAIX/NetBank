@@ -4,24 +4,22 @@ import (
 	"context"
 )
 
-var tnb *netBank
-
-const (
-	driver = "pgx"
-	source = "host=localhost port=5180 user=testUser database=netbank_test password=testPassword sslmode=disable"
+var (
+	tnb *netBank
 )
 
-func connectTestDB() error {
+func ConnectTestDB() error {
+
 	var err error
 
-	tnb, err = NewNetBank(driver, source)
+	tnb, err = NewNetBank()
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func disconnectTestDB() error {
+func DisconnectTestDB() error {
 	err := tnb.Close()
 	if err != nil {
 		return err
@@ -29,7 +27,7 @@ func disconnectTestDB() error {
 	return nil
 }
 
-func insertTestData() error {
+func InsertTestData() error {
 	tx, err := tnb.Begin()
 	if err != nil {
 		return err
@@ -59,7 +57,7 @@ func insertTestData() error {
 	return nil
 }
 
-func deleteTestData() error {
+func DeleteTestData() error {
 	tx, err := tnb.Begin()
 	if err != nil {
 		return err
