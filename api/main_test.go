@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 
 	"github.com/hiroyuki-takayama-RAIX/core"
@@ -14,6 +15,24 @@ type fixture struct {
 	request      string
 	expectedCode int
 	expectedBody string
+}
+
+func TestMain(m *testing.M) {
+	err := core.ConnectTestDB()
+	if err != nil {
+		msg := fmt.Sprintf("failed to connect test db: %v", err)
+		panic(msg)
+	}
+
+	code := m.Run()
+
+	err = core.DisconnectTestDB()
+	if err != nil {
+		msg := fmt.Sprintf("failed to disconnect test db: %v", err)
+		panic(msg)
+	}
+
+	os.Exit(code)
 }
 
 // i wanna change this name better...
@@ -45,11 +64,11 @@ func CommonTestLogic(f *fixture, h func(w http.ResponseWriter, req *http.Request
 }
 
 func TestStatement(t *testing.T) {
-	err := core.BeforeEach()
+	err := core.InsertTestData()
 	if err != nil {
-		t.Errorf("failed to BeforeEach(): %v", err)
+		t.Errorf("failed to insertTestData(): %v", err)
 	}
-	defer core.AfterEach()
+	defer core.DeleteTestData()
 	// set fs as fixture to test some cases in same programm.
 	/*
 		fs := []fixture{}
@@ -99,11 +118,11 @@ func TestStatement(t *testing.T) {
 }
 
 func TestDeposit(t *testing.T) {
-	err := core.BeforeEach()
+	err := core.InsertTestData()
 	if err != nil {
-		t.Errorf("failed to BeforeEach(): %v", err)
+		t.Errorf("failed to insertTestData(): %v", err)
 	}
-	defer core.AfterEach()
+	defer core.DeleteTestData()
 
 	fs := make([]*fixture, 4)
 	fs[0] = &fixture{
@@ -150,11 +169,11 @@ func TestDeposit(t *testing.T) {
 }
 
 func TestWithdraw(t *testing.T) {
-	err := core.BeforeEach()
+	err := core.InsertTestData()
 	if err != nil {
-		t.Errorf("failed to BeforeEach(): %v", err)
+		t.Errorf("failed to insertTestData(): %v", err)
 	}
-	defer core.AfterEach()
+	defer core.DeleteTestData()
 
 	fs := make([]*fixture, 3)
 	fs[0] = &fixture{
@@ -207,11 +226,11 @@ func TestWithdraw(t *testing.T) {
 }
 
 func TestTransfar(t *testing.T) {
-	err := core.BeforeEach()
+	err := core.InsertTestData()
 	if err != nil {
-		t.Errorf("failed to BeforeEach(): %v", err)
+		t.Errorf("failed to insertTestData(): %v", err)
 	}
-	defer core.AfterEach()
+	defer core.DeleteTestData()
 
 	fs := make([]*fixture, 4)
 	fs[0] = &fixture{
@@ -286,11 +305,11 @@ func TestTeapot(t *testing.T) {
 }
 
 func TestCreateAccount(t *testing.T) {
-	err := core.BeforeEach()
+	err := core.InsertTestData()
 	if err != nil {
-		t.Errorf("failed to BeforeEach(): %v", err)
+		t.Errorf("failed to insertTestData(): %v", err)
 	}
-	defer core.AfterEach()
+	defer core.DeleteTestData()
 
 	fs := make([]*fixture, 2)
 	fs[0] = &fixture{
@@ -315,11 +334,11 @@ func TestCreateAccount(t *testing.T) {
 }
 
 func TestDeleteAccount(t *testing.T) {
-	err := core.BeforeEach()
+	err := core.InsertTestData()
 	if err != nil {
-		t.Errorf("failed to BeforeEach(): %v", err)
+		t.Errorf("failed to insertTestData(): %v", err)
 	}
-	defer core.AfterEach()
+	defer core.DeleteTestData()
 
 	fs := make([]*fixture, 2)
 	fs[0] = &fixture{

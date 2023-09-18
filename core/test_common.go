@@ -4,10 +4,31 @@ import (
 	"context"
 )
 
-// insert fows to tables and delete all rows on each test.
+var (
+	tnb *netBank
+)
 
-func BeforeEach() error {
-	tx, err := db.Begin()
+func ConnectTestDB() error {
+
+	var err error
+
+	tnb, err = NewNetBank()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func DisconnectTestDB() error {
+	err := tnb.Close()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func InsertTestData() error {
+	tx, err := tnb.Begin()
 	if err != nil {
 		return err
 	}
@@ -36,8 +57,8 @@ func BeforeEach() error {
 	return nil
 }
 
-func AfterEach() error {
-	tx, err := db.Begin()
+func DeleteTestData() error {
+	tx, err := tnb.Begin()
 	if err != nil {
 		return err
 	}

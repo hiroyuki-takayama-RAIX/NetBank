@@ -25,8 +25,6 @@ func main() {
 	// API URL の設計を見直す
 	// path parameter, query parameter, body parameter
 
-	fmt.Println("Server is running")
-
 	// log.fatal show you log with date_time
 	log.Fatal(http.ListenAndServe("localhost:8000", nil))
 }
@@ -38,6 +36,11 @@ api structure is as follows.
 */
 
 func statement(w http.ResponseWriter, req *http.Request) {
+	nb, err := core.NewNetBank()
+	if err != nil {
+		http.Error(w, "initialize error!", http.StatusBadRequest)
+	}
+
 	// parse request
 	numberqs := req.URL.Query().Get("number")
 
@@ -51,7 +54,7 @@ func statement(w http.ResponseWriter, req *http.Request) {
 	if number, err := strconv.Atoi(numberqs); err != nil {
 		http.Error(w, fmt.Sprintf("%v is invalid account number!", numberqs), http.StatusBadRequest)
 	} else {
-		s, err := core.NewNetBank().Statement(number)
+		s, err := nb.Statement(number)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("%v", err), http.StatusNotFound)
 		} else {
@@ -61,6 +64,11 @@ func statement(w http.ResponseWriter, req *http.Request) {
 }
 
 func deposit(w http.ResponseWriter, req *http.Request) {
+	nb, err := core.NewNetBank()
+	if err != nil {
+		http.Error(w, "initialize error!", http.StatusBadRequest)
+	}
+
 	// make reqests each query.
 	numberqs := req.URL.Query().Get("number")
 	amountqs := req.URL.Query().Get("amount")
@@ -75,12 +83,12 @@ func deposit(w http.ResponseWriter, req *http.Request) {
 	} else if amount, err := strconv.ParseFloat(amountqs, 64); err != nil {
 		http.Error(w, fmt.Sprintf("%v is invalid amount number!", amountqs), http.StatusBadRequest)
 	} else {
-		err := core.NewNetBank().Deposit(number, amount)
+		err := nb.Deposit(number, amount)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("%v", err), http.StatusBadRequest)
 		} else {
 			//when amount is less than zero, error is not nil.
-			s, err := core.NewNetBank().Statement(number)
+			s, err := nb.Statement(number)
 			if err != nil {
 				http.Error(w, fmt.Sprintf("%v", err), http.StatusNotFound)
 			} else {
@@ -91,6 +99,11 @@ func deposit(w http.ResponseWriter, req *http.Request) {
 }
 
 func withdraw(w http.ResponseWriter, req *http.Request) {
+	nb, err := core.NewNetBank()
+	if err != nil {
+		http.Error(w, "initialize error!", http.StatusBadRequest)
+	}
+
 	// make reqests each query.
 	numberqs := req.URL.Query().Get("number")
 	amountqs := req.URL.Query().Get("amount")
@@ -106,12 +119,12 @@ func withdraw(w http.ResponseWriter, req *http.Request) {
 	} else if amount, err := strconv.ParseFloat(amountqs, 64); err != nil {
 		http.Error(w, fmt.Sprintf("%v is invalid amount number!", amountqs), http.StatusBadRequest)
 	} else {
-		err := core.NewNetBank().Withdraw(number, amount)
+		err := nb.Withdraw(number, amount)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("%v", err), http.StatusBadRequest)
 		} else {
 			// below lines are error handling of amountqs
-			s, err := core.NewNetBank().Statement(number)
+			s, err := nb.Statement(number)
 			if err != nil {
 				http.Error(w, fmt.Sprintf("%v", err), http.StatusBadRequest)
 			} else {
@@ -122,6 +135,11 @@ func withdraw(w http.ResponseWriter, req *http.Request) {
 }
 
 func transfer(w http.ResponseWriter, req *http.Request) {
+	nb, err := core.NewNetBank()
+	if err != nil {
+		http.Error(w, "initialize error!", http.StatusBadRequest)
+	}
+
 	// make reqests each query.
 	senderNumberqs := req.URL.Query().Get("from")
 	recieverNumberqs := req.URL.Query().Get("to")
@@ -145,16 +163,16 @@ func transfer(w http.ResponseWriter, req *http.Request) {
 	} else if amount, err := strconv.ParseFloat(amountqs, 64); err != nil {
 		http.Error(w, fmt.Sprintf("%v is invalid amount number!", amountqs), http.StatusBadRequest)
 	} else {
-		err := core.NewNetBank().Transfer(senderNumber, recieverNumber, amount)
+		err := nb.Transfer(senderNumber, recieverNumber, amount)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("%v", err), http.StatusNotFound)
 			// below lines are error handling of amountqs
 		} else {
-			sender, err := core.NewNetBank().Statement(senderNumber)
+			sender, err := nb.Statement(senderNumber)
 			if err != nil {
 				http.Error(w, fmt.Sprintf("%v", err), http.StatusBadRequest)
 			} else {
-				reciever, err := core.NewNetBank().Statement(recieverNumber)
+				reciever, err := nb.Statement(recieverNumber)
 				if err != nil {
 					http.Error(w, fmt.Sprintf("%v", err), http.StatusBadRequest)
 				} else {
@@ -170,6 +188,11 @@ func teapot(w http.ResponseWriter, r *http.Request) {
 }
 
 func createAccount(w http.ResponseWriter, req *http.Request) {
+	nb, err := core.NewNetBank()
+	if err != nil {
+		http.Error(w, "initialize error!", http.StatusBadRequest)
+	}
+
 	// parse request
 	numberqs := req.URL.Query().Get("number")
 	name := req.URL.Query().Get("name")
@@ -186,11 +209,11 @@ func createAccount(w http.ResponseWriter, req *http.Request) {
 	if number, err := strconv.Atoi(numberqs); err != nil {
 		http.Error(w, fmt.Sprintf("%v is invalid account number!", numberqs), http.StatusBadRequest)
 	} else {
-		err := core.NewNetBank().CreateAccount(number, name, addr, phone)
+		err := nb.CreateAccount(number, name, addr, phone)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("%v", err), http.StatusNotFound)
 		} else {
-			s, err := core.NewNetBank().Statement(number)
+			s, err := nb.Statement(number)
 			if err != nil {
 				http.Error(w, fmt.Sprintf("%v", err), http.StatusBadRequest)
 			} else {
@@ -201,6 +224,11 @@ func createAccount(w http.ResponseWriter, req *http.Request) {
 }
 
 func deleteAccount(w http.ResponseWriter, req *http.Request) {
+	nb, err := core.NewNetBank()
+	if err != nil {
+		http.Error(w, "initialize error!", http.StatusBadRequest)
+	}
+
 	// parse request
 	numberqs := req.URL.Query().Get("number")
 
@@ -214,11 +242,11 @@ func deleteAccount(w http.ResponseWriter, req *http.Request) {
 	if number, err := strconv.Atoi(numberqs); err != nil {
 		http.Error(w, fmt.Sprintf("%v is invalid account number!", numberqs), http.StatusBadRequest)
 	} else {
-		err := core.NewNetBank().DeleteAccount(number)
+		err := nb.DeleteAccount(number)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("%v", err), http.StatusNotFound)
 		} else {
-			s, err := core.NewNetBank().Statement(number)
+			s, err := nb.Statement(number)
 			if err != nil {
 				http.Error(w, fmt.Sprintf("%v", err), http.StatusBadRequest)
 			} else {

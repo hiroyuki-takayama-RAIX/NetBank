@@ -5,49 +5,109 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"os"
 	"reflect"
 	"testing"
 
 	_ "github.com/jackc/pgx/v4/stdlib"
 )
 
-// init is used to assign to db as global variable
-func init() {
-	var err error
-	db, err = sql.Open("pgx", "host=localhost port=1234 user=postgres database=netbank password=passw0rd sslmode=disable")
+func TestMain(m *testing.M) {
+	err := ConnectTestDB()
 	if err != nil {
-		fmt.Printf("failed to connect db: %v\n", err)
-		// You can choose to exit or handle the error accordingly.
+		msg := fmt.Sprintf("failed to connect test db: %v", err)
+		panic(msg)
+	}
+
+	code := m.Run()
+
+	err = DisconnectTestDB()
+	if err != nil {
+		msg := fmt.Sprintf("failed to disconnect test db: %v", err)
+		panic(msg)
+	}
+
+	os.Exit(code)
+}
+
+func TestBegin(t *testing.T) {
+	err := InsertTestData()
+	if err != nil {
+		t.Errorf("failed to insert test data: %v", err)
+	}
+	defer DeleteTestData()
+
+	tx, err := tnb.Begin()
+	if err != nil {
+		t.Errorf("failed to start transaction: %v", err)
+	}
+	defer tx.Rollback()
+
+	q := `
+	UPDATE account 
+	SET balance=200 
+	WHERE id=1001;
+	`
+	_, err = tx.ExecContext(context.Background(), q)
+	if err != nil {
+		t.Errorf("failed to query: %v", err)
+	} else {
+		tx.Commit()
+	}
+
+	s, err := tnb.Statement(1001)
+	if err != nil {
+		t.Errorf("cannnot generate the statement of account_%v: %v", 1001, err)
+	}
+
+	expected := "1001 - John - 200"
+
+	if reflect.DeepEqual(s, expected) == false {
+		t.Errorf("rows mismatch! expected %v, got %v", expected, s)
 	}
 }
 
 func TestNewNetBank(t *testing.T) {
-	got := NewNetBank()
-	expected := &netBank{}
-	if reflect.DeepEqual(got, expected) != true {
-		t.Errorf("failed to NewNetBank:\ngot %v\nexpected %v", got, expected)
+	got, err := NewNetBank()
+	if err != nil {
+		t.Errorf("failed to genetare a new netBank instance: %v", err)
+	}
+	defer got.Close()
+
+	err = got.Ping()
+	if err != nil {
+		t.Errorf("connection between netbank and db is not build: %v", err)
+	}
+
+	err = got.Close()
+	if err != nil {
+		t.Errorf("failed to close the connection: %v", err)
+	}
+
+	err = got.Ping()
+	if err == nil {
+		t.Errorf("failed to close the connection: %v", err)
 	}
 }
 
 func TestCreateAccount(t *testing.T) {
-	err := BeforeEach()
+	err := InsertTestData()
 	if err != nil {
-		t.Errorf("failed to BeforeEach(): %v", err)
+		t.Errorf("failed to insert test data: %v", err)
 	}
-	defer AfterEach()
+	defer DeleteTestData()
 
-	nb := netBank{}
 	id := 2002
 	name := "C.J."
 	addr := "Los Santos"
 	phone := "(080) 1457 9387"
 
-	err = nb.CreateAccount(id, name, addr, phone)
+	err = tnb.CreateAccount(id, name, addr, phone)
 	if err != nil {
 		t.Errorf("failed to create a new account_%v: %v", id, err)
 	}
 
-	s, err := nb.Statement(id)
+	s, err := tnb.Statement(id)
 	if err != nil {
 		t.Errorf("cannnot generate the statement of account_%v: %v", id, err)
 	}
@@ -59,43 +119,41 @@ func TestCreateAccount(t *testing.T) {
 }
 
 func TestDeleteAccount(t *testing.T) {
-	err := BeforeEach()
+	err := InsertTestData()
 	if err != nil {
-		t.Errorf("failed to BeforeEach(): %v", err)
+		t.Errorf("failed to insertTestData(): %v", err)
 	}
-	defer AfterEach()
+	defer DeleteTestData()
 
-	nb := netBank{}
 	id := 2002
 
-	err = nb.DeleteAccount(id)
+	err = tnb.DeleteAccount(id)
 	if err != nil {
 		t.Errorf("failed to create a new account_%v: %v", id, err)
 	}
 
-	_, err = nb.Statement(id)
+	_, err = tnb.Statement(id)
 	if err == nil {
 		t.Errorf("failed to delete account_%v", id)
 	}
 }
 
 func TestDeposit(t *testing.T) {
-	err := BeforeEach()
+	err := InsertTestData()
 	if err != nil {
-		t.Errorf("failed to BeforeEach(): %v", err)
+		t.Errorf("failed to insertTestData(): %v", err)
 	}
-	defer AfterEach()
+	defer DeleteTestData()
 
-	nb := netBank{}
 	id := 1001
 	money := float64(100)
 
-	err = nb.Deposit(id, money)
+	err = tnb.Deposit(id, money)
 	if err != nil {
 		t.Errorf("failed to deposit on account_%v: %v", id, err)
 	}
 
-	s, err := nb.Statement(id)
+	s, err := tnb.Statement(id)
 	if err != nil {
 		t.Errorf("cannnot generate the statement of account_%v: %v", id, err)
 	}
@@ -109,22 +167,21 @@ func TestDeposit(t *testing.T) {
 // Invalid pattern test
 
 func TestWithdraw(t *testing.T) {
-	err := BeforeEach()
+	err := InsertTestData()
 	if err != nil {
 		t.Errorf("failed to setup talbes: %v", err)
 	}
-	defer AfterEach()
+	defer DeleteTestData()
 
 	id := 1001
 	money := float64(100)
-	nb := NewNetBank()
 
-	err = nb.Withdraw(id, money)
+	err = tnb.Withdraw(id, money)
 	if err != nil {
 		t.Errorf("failed to withdraw: %v", err)
 	}
 
-	s, err := nb.Statement(id)
+	s, err := tnb.Statement(id)
 	if err != nil {
 		t.Errorf("cannnot generate the statement: %v", err)
 	}
@@ -136,23 +193,22 @@ func TestWithdraw(t *testing.T) {
 }
 
 func TestTransfer(t *testing.T) {
-	err := BeforeEach()
+	err := InsertTestData()
 	if err != nil {
-		t.Errorf("failed to BeforeEach(): %v", err)
+		t.Errorf("failed to insertTestData(): %v", err)
 	}
-	defer AfterEach()
+	defer DeleteTestData()
 
-	nb := NewNetBank()
 	sender_id := 1001
 	reciever_id := 3003
 	money := float64(50)
 
-	err = nb.Transfer(sender_id, reciever_id, money)
+	err = tnb.Transfer(sender_id, reciever_id, money)
 	if err != nil {
 		t.Errorf("failed to withdraw: %v", err)
 	}
 
-	s, err := nb.Statement(sender_id)
+	s, err := tnb.Statement(sender_id)
 	if err != nil {
 		t.Errorf("cannnot generate the statement of account_%v: %v", sender_id, err)
 	}
@@ -161,7 +217,7 @@ func TestTransfer(t *testing.T) {
 		t.Errorf("got unexpected statement:\nexpected %v\ngot %v", expected, s)
 	}
 
-	s, err = nb.Statement(reciever_id)
+	s, err = tnb.Statement(reciever_id)
 	if err != nil {
 		t.Errorf("cannnot generate the statement of account_%v: %v", reciever_id, err)
 	}
@@ -172,15 +228,14 @@ func TestTransfer(t *testing.T) {
 }
 
 func TestStatement(t *testing.T) {
-	err := BeforeEach()
+	err := InsertTestData()
 	if err != nil {
-		t.Errorf("failed to BeforeEach(): %v", err)
+		t.Errorf("failed to insertTestData(): %v", err)
 	}
-	defer AfterEach()
+	defer DeleteTestData()
 
-	nb := NewNetBank()
 	id := 1001
-	s, err := nb.Statement(1001)
+	s, err := tnb.Statement(1001)
 	if err != nil {
 		t.Errorf("cannnot generate the statement of account_%v: %v", id, err)
 	}
@@ -204,12 +259,29 @@ type customer struct {
 	phone    string
 }
 
+// test to learning database/sql
 func TestDatabaseSql(t *testing.T) {
-	err := BeforeEach()
+	var (
+		db     *sql.DB
+		driver string
+		source string
+		err    error
+	)
+
+	err = InsertTestData()
 	if err != nil {
 		t.Errorf("failed to setup tables: %v", err)
 	}
-	defer AfterEach()
+	defer DeleteTestData()
+
+	// its so hardcoding, need to modify!
+	driver = "pgx"
+	source = "host=localhost port=5180 user=testUser database=netbank_test password=testPassword sslmode=disable"
+
+	db, err = sql.Open(driver, source)
+	if err != nil {
+		t.Errorf("failed to connect db: %v", err)
+	}
 
 	t.Run("db.Ping()", func(t *testing.T) {
 		// confirme the connection with db.Ping()
