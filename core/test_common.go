@@ -4,10 +4,33 @@ import (
 	"context"
 )
 
-// insert fows to tables and delete all rows on each test.
+var tnb *netBank
 
-func BeforeEach() error {
-	tx, err := db.Begin()
+const (
+	driver = "pgx"
+	source = "host=localhost port=5180 user=testUser database=netbank_test password=testPassword sslmode=disable"
+)
+
+func connectTestDB() error {
+	var err error
+
+	tnb, err = NewNetBank(driver, source)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func disconnectTestDB() error {
+	err := tnb.Close()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func insertTestData() error {
+	tx, err := tnb.Begin()
 	if err != nil {
 		return err
 	}
@@ -36,8 +59,8 @@ func BeforeEach() error {
 	return nil
 }
 
-func AfterEach() error {
-	tx, err := db.Begin()
+func deleteTestData() error {
+	tx, err := tnb.Begin()
 	if err != nil {
 		return err
 	}

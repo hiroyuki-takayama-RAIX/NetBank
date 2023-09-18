@@ -8,18 +8,6 @@ import (
 	_ "github.com/jackc/pgx/v4/stdlib"
 )
 
-var db *sql.DB
-
-// init is used to assign to db as global variable
-func init() {
-	var err error
-	db, err = sql.Open("pgx", "host=localhost port=5180 user=testUser database=netbank_test password=testPassword sslmode=disable")
-	if err != nil {
-		fmt.Printf("failed to connect db: %v\n", err)
-		// You can choose to exit or handle the error accordingly.
-	}
-}
-
 // Customer ...
 type Customer struct {
 	Name    string `json:"name"`
@@ -35,10 +23,27 @@ type Account struct {
 }
 
 type netBank struct {
+	db *sql.DB
 }
 
-func NewNetBank() *netBank {
-	return &netBank{}
+func NewNetBank(driver string, source string) (*netBank, error) {
+	db, err := sql.Open(driver, source)
+	if err != nil {
+		return nil, err
+	}
+	return &netBank{db: db}, nil
+}
+
+func (nb *netBank) Ping() error {
+	return nb.db.Ping()
+}
+
+func (nb *netBank) Close() error {
+	return nb.db.Close()
+}
+
+func (nb *netBank) Begin() (*sql.Tx, error) {
+	return nb.db.Begin()
 }
 
 func (nb *netBank) Deposit(num int, money float64) error {
@@ -54,7 +59,7 @@ func (nb *netBank) Deposit(num int, money float64) error {
 	FROM account 
 	WHERE id=$1;
 	`
-	row := db.QueryRowContext(context.Background(), q, num)
+	row := nb.db.QueryRowContext(context.Background(), q, num)
 	err := row.Scan(&balance)
 	if err != nil {
 		return err
@@ -66,7 +71,7 @@ func (nb *netBank) Deposit(num int, money float64) error {
 	}
 
 	// start the transaction
-	tx, err := db.Begin()
+	tx, err := nb.db.Begin()
 	if err != nil {
 		return err
 	}
@@ -100,7 +105,7 @@ func (nb *netBank) Withdraw(num int, money float64) error {
 	FROM account 
 	WHERE id=$1;
 	`
-	row := db.QueryRowContext(context.Background(), q, num)
+	row := nb.db.QueryRowContext(context.Background(), q, num)
 	err := row.Scan(&balance)
 	if err != nil {
 		return err
@@ -116,7 +121,7 @@ func (nb *netBank) Withdraw(num int, money float64) error {
 	}
 
 	// start the transaction
-	tx, err := db.Begin()
+	tx, err := nb.db.Begin()
 	if err != nil {
 		return err
 	}
@@ -150,7 +155,7 @@ func (nb *netBank) Statement(num int) (string, error) {
 		  INNER JOIN customer 
 		  ON account.id=customer.id 
 		  WHERE account.id=$1;`
-	row := db.QueryRowContext(context.Background(), q, num)
+	row := nb.db.QueryRowContext(context.Background(), q, num)
 	err := row.Scan(&id, &balance, &name)
 	if err != nil {
 		return "", err
@@ -177,7 +182,7 @@ func (nb *netBank) Transfer(sender int, reciever int, money float64) error {
 	FROM account 
 	WHERE id=$1;
 	`
-	senderRow := db.QueryRowContext(context.Background(), senderQuery, sender)
+	senderRow := nb.db.QueryRowContext(context.Background(), senderQuery, sender)
 	err := senderRow.Scan(&senderBalance)
 	if err != nil {
 		return err
@@ -194,7 +199,7 @@ func (nb *netBank) Transfer(sender int, reciever int, money float64) error {
 	/*--- validation of reciever ---*/
 	var recieverBalance float64
 	recieverQuery := `SELECT balance FROM account WHERE id=$1;`
-	recieverRow := db.QueryRowContext(context.Background(), recieverQuery, reciever)
+	recieverRow := nb.db.QueryRowContext(context.Background(), recieverQuery, reciever)
 	err = recieverRow.Scan(&recieverBalance)
 	if err != nil {
 		return err
@@ -205,7 +210,7 @@ func (nb *netBank) Transfer(sender int, reciever int, money float64) error {
 	}
 
 	// start the transaction
-	tx, err := db.Begin()
+	tx, err := nb.db.Begin()
 	if err != nil {
 		return err
 	}
@@ -229,7 +234,7 @@ func (nb *netBank) Transfer(sender int, reciever int, money float64) error {
 }
 
 func (nb *netBank) CreateAccount(num int, name string, addr string, phone string) error {
-	tx, err := db.Begin()
+	tx, err := nb.db.Begin()
 	if err != nil {
 		return err
 	}
@@ -259,7 +264,7 @@ func (nb *netBank) CreateAccount(num int, name string, addr string, phone string
 }
 
 func (nb *netBank) DeleteAccount(num int) error {
-	tx, err := db.Begin()
+	tx, err := nb.db.Begin()
 	if err != nil {
 		return err
 	}
