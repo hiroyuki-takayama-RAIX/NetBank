@@ -23,19 +23,23 @@
 [x] withdrawのエラーを解消する
 
 <env>
-[] unitテスト用のテーブル、本番用のテーブルを作成する
+[x] unitテスト用のテーブル、本番用のテーブルを作成する
 [] main.goをコンテナ上で起動できるようにする
 [] サーバー起動時に毎回任意のポート番号を割り当てるようにする
 
 
 
-<urlでやること>
-[] createAccountの改修
-    [] リクエストのクエリパラメーターをボディパラメーターに変更
-    [] account.idに存在しないIDを任意に割り当てる方式に変更する(POST)
-    [] リソースの作成に成功したら、IDと仮パスワードをレスポンスとして返すようにする。
-[] statementの改修
-[] depositeの改修
-[] withdrawの改修
-[] transferの改修
-[] deleteAccountの改修 
+<apiの改修>
+id/　
+  GET => 全てのアカウントをJSONとして取得する。新しい関数 => done
+
+id/{number}/
+  GET => numberに合致するアカウント情報をjsonとして取得する。statement => done
+  DELETE => numberに合致するwアカウントをDBから削除する。deleteAccount
+
+id/{number}/ + bodyParameter
+  POST => 新しいアカウントを作成するための情報をJSONで送信し、登録する。=> done
+    [] change request body only customer struct
+  PUT => アカウント情報を変更する
+  PATCH => 預金残高を変更させる。deposit, withdraw, transfer
+  
