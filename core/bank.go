@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"math/rand"
 	"os"
 
 	_ "github.com/jackc/pgx/v4/stdlib"
@@ -25,6 +26,15 @@ type Account struct {
 
 type netBank struct {
 	db *sql.DB
+}
+
+func (a *Account) SetUniqueID(nb *netBank) error {
+	id, err := nb.GetNewId()
+	if err != nil {
+		return err
+	}
+	a.Number = id
+	return nil
 }
 
 func NewNetBank() (*netBank, error) {
@@ -252,34 +262,39 @@ func (nb *netBank) Transfer(sender int, reciever int, money float64) error {
 	return nil
 }
 
-func (nb *netBank) CreateAccount(num int, name string, addr string, phone string) error {
+func (nb *netBank) CreateAccount(c *Customer) (int, error) {
 	tx, err := nb.db.Begin()
 	if err != nil {
-		return err
+		return 0, err
 	}
 	defer tx.Rollback()
+
+	id, err := nb.GetNewId()
+	if err != nil {
+		return 0, err
+	}
 
 	// update the balance
 	q := `
 	INSERT INTO customer (id, username, addr, phone) 
 	VALUES ($1, $2, $3, $4);
 	`
-	_, err = tx.ExecContext(context.Background(), q, num, name, addr, phone)
+	_, err = tx.ExecContext(context.Background(), q, id, c.Name, c.Address, c.Phone)
 	if err != nil {
-		return err
+		return 0, err
 	} else {
 		q := `
 		INSERT INTO account (id, balance) 
 		VALUES ($1, $2);
 		`
-		_, err = tx.ExecContext(context.Background(), q, num, float64(0))
+		_, err = tx.ExecContext(context.Background(), q, id, float64(0))
 		if err != nil {
-			return err
+			return 0, err
 		} else {
 			tx.Commit()
 		}
 	}
-	return nil
+	return id, nil
 }
 
 func (nb *netBank) DeleteAccount(num int) error {
@@ -388,4 +403,60 @@ func (nb *netBank) GetAccount(num int) (*Account, error) {
 	}
 
 	return &account, nil
+}
+
+func (nb *netBank) GetNewId() (int, error) {
+	var id int
+
+	q := `SELECT id
+	      FROM account;
+		  `
+	rows, err := nb.db.QueryContext(context.Background(), q)
+	if err != nil {
+		return 0, err
+	}
+	defer rows.Close()
+
+	ids := []int{}
+
+	// Iterate through the result set
+	for rows.Next() {
+		err := rows.Scan(&id)
+		if err != nil {
+			return 0, err
+		}
+		ids = append(ids, id)
+	}
+
+	var newID int
+	for _, id := range ids {
+		newID = rand.Intn(2147483647)
+		if newID != id {
+			break
+		}
+	}
+	return newID, nil
+}
+
+func (nb *netBank) UpdateAccount(id int, c *Customer) error {
+	tx, err := nb.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// check update statement
+	q := `
+	UPDATE customer
+	SET username=$1, addr=$2, phone=$3 
+	WHERE id=$4;
+	`
+	_, err = tx.ExecContext(context.Background(), q, c.Name, c.Address, c.Phone, id)
+	if err != nil {
+		return err
+	} else {
+		tx.Commit()
+	}
+
+	return nil
 }

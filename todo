@@ -23,7 +23,7 @@
 [x] withdrawのエラーを解消する
 
 <env>
-[] unitテスト用のテーブル、本番用のテーブルを作成する
+[x] unitテスト用のテーブル、本番用のテーブルを作成する
 [] main.goをコンテナ上で起動できるようにする
 [] サーバー起動時に毎回任意のポート番号を割り当てるようにする
 
@@ -38,6 +38,8 @@ id/{number}/
   DELETE => numberに合致するwアカウントをDBから削除する。deleteAccount
 
 id/{number}/ + bodyParameter
-  POST => 新しいアカウントを作成するための情報をJSONで送信し、登録する。createAccount
-  PUT => 預金残高を変更させる。deposit, withdraw, transfer
+  POST => 新しいアカウントを作成するための情報をJSONで送信し、登録する。=> done
+    [] change request body only customer struct
+  PUT => アカウント情報を変更する
+  PATCH => 預金残高を変更させる。deposit, withdraw, transfer
   

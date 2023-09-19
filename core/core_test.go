@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"math/rand"
 	"os"
 	"reflect"
 	"testing"
@@ -127,7 +128,7 @@ func TestGetAccounts(t *testing.T) {
 	}
 
 	for i := 0; i < len(got); i++ {
-		if !reflect.DeepEqual(got[i], expected[i]) {
+		if !reflect.DeepEqual(*got[i], *expected[i]) {
 			t.Errorf("got unexpected data:\nexpected: %v\ngot: %v", expected, got)
 		}
 	}
@@ -168,24 +169,34 @@ func TestCreateAccount(t *testing.T) {
 	}
 	defer DeleteTestData()
 
-	id := 2002
 	name := "C.J."
 	addr := "Los Santos"
 	phone := "(080) 1457 9387"
 
-	err = tnb.CreateAccount(id, name, addr, phone)
+	c := &Customer{
+		Name:    name,
+		Address: addr,
+		Phone:   phone,
+	}
+
+	id, err := tnb.CreateAccount(c)
 	if err != nil {
 		t.Errorf("failed to create a new account_%v: %v", id, err)
 	}
 
-	s, err := tnb.Statement(id)
+	got, err := tnb.GetAccount(id)
 	if err != nil {
-		t.Errorf("cannnot generate the statement of account_%v: %v", id, err)
+		t.Errorf("cannnot get account_%v: %v", id, err)
 	}
 
-	expected := "2002 - C.J. - 0"
-	if s != expected {
-		t.Errorf("got unexpected statement:\nexpected %v\ngot %v", expected, s)
+	expected := &Account{
+		Customer: *c,
+		Number:   id,
+		Balance:  0,
+	}
+
+	if !reflect.DeepEqual(*got, *expected) {
+		t.Errorf("got unexpected value:\nexpected %v\ngot %v", expected, got)
 	}
 }
 
@@ -206,6 +217,42 @@ func TestDeleteAccount(t *testing.T) {
 	_, err = tnb.Statement(id)
 	if err == nil {
 		t.Errorf("failed to delete account_%v", id)
+	}
+}
+
+func TestUpdateAccount(t *testing.T) {
+	err := InsertTestData()
+	if err != nil {
+		t.Errorf("failed to insertTestData(): %v", err)
+	}
+	defer DeleteTestData()
+
+	id := 1001
+
+	c := &Customer{
+		Name:    "johnson",
+		Address: "Libercity",
+		Phone:   "(080) 4075 8704",
+	}
+
+	err = tnb.UpdateAccount(id, c)
+	if err != nil {
+		t.Errorf("failed to update account_%v info: %v", id, err)
+	}
+
+	got, err := tnb.GetAccount(id)
+	if err != nil {
+		t.Errorf("cannnot get account_%v: %v", id, err)
+	}
+
+	expected := &Account{
+		Customer: *c,
+		Number:   id,
+		Balance:  100,
+	}
+
+	if !reflect.DeepEqual(*got, *expected) {
+		t.Errorf("got unexpected value:\nexpected %v\ngot %v", expected, got)
 	}
 }
 
@@ -314,6 +361,26 @@ func TestStatement(t *testing.T) {
 	expected := "1001 - John - 100"
 	if s != expected {
 		t.Errorf("got unexpected statement:\nexpected %v\ngot %v", expected, s)
+	}
+}
+
+func TestGetNewId(t *testing.T) {
+	rand.Seed(1001)
+	id, err := tnb.GetNewId()
+	if err != nil {
+		t.Errorf("failed to generate a unique id: %v", err)
+	}
+	if id == 1001 {
+		t.Errorf("generate duplicate account id: %v", id)
+	}
+
+	rand.Seed(3003)
+	id, err = tnb.GetNewId()
+	if err != nil {
+		t.Errorf("failed to generate a unique id: %v", err)
+	}
+	if id == 3003 {
+		t.Errorf("generate duplicate account id: %v", id)
 	}
 }
 
