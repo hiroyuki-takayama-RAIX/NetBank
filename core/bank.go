@@ -19,8 +19,8 @@ type Customer struct {
 // Account ...
 type Account struct {
 	Customer
-	Number  int32
-	Balance float64
+	Number  int     `json:"id"`
+	Balance float64 `json:"balance"`
 }
 
 type netBank struct {
@@ -310,4 +310,82 @@ func (nb *netBank) DeleteAccount(num int) error {
 		}
 	}
 	return nil
+}
+
+func (nb *netBank) GetAccounts() ([]*Account, error) {
+	var (
+		name    string
+		address string
+		phone   string
+		id      int
+		balance float64
+	)
+
+	q := `SELECT username, addr, phone, account.id, balance 
+	      FROM account 
+		  INNER JOIN customer 
+		  ON account.id=customer.id;`
+	rows, err := nb.db.QueryContext(context.Background(), q)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	accounts := []*Account{}
+
+	// Iterate through the result set
+	for rows.Next() {
+		err := rows.Scan(&name, &address, &phone, &id, &balance)
+		if err != nil {
+			return nil, err
+		}
+
+		account := &Account{
+			Customer: Customer{
+				Name:    name,
+				Address: address,
+				Phone:   phone,
+			},
+			Number:  id,
+			Balance: balance,
+		}
+
+		accounts = append(accounts, account)
+	}
+
+	return accounts, nil
+}
+
+func (nb *netBank) GetAccount(num int) (*Account, error) {
+	var (
+		name    string
+		address string
+		phone   string
+		id      int
+		balance float64
+	)
+
+	q := `SELECT username, addr, phone, account.id, balance 
+	      FROM account 
+		  INNER JOIN customer 
+		  ON account.id=customer.id
+		  WHERE account.id=$1;`
+	row := nb.db.QueryRowContext(context.Background(), q, num)
+
+	err := row.Scan(&name, &address, &phone, &id, &balance)
+	if err != nil {
+		return nil, err
+	}
+
+	account := Account{
+		Customer: Customer{
+			Name:    name,
+			Address: address,
+			Phone:   phone,
+		},
+		Number:  id,
+		Balance: balance,
+	}
+
+	return &account, nil
 }

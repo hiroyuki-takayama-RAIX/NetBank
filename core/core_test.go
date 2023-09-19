@@ -90,6 +90,77 @@ func TestNewNetBank(t *testing.T) {
 	}
 }
 
+func TestGetAccounts(t *testing.T) {
+	err := InsertTestData()
+	if err != nil {
+		t.Errorf("failed to insert test data: %v", err)
+	}
+	defer DeleteTestData()
+
+	got, err := tnb.GetAccounts()
+	if err != nil {
+		t.Errorf("failed to get all accounts: %v", err)
+	}
+
+	expected := make([]*Account, 2)
+	expected[0] = &Account{
+		Customer: Customer{
+			Name:    "John",
+			Address: "Los Angeles, California",
+			Phone:   "(213) 555 0147",
+		},
+		Number:  1001,
+		Balance: 100,
+	}
+	expected[1] = &Account{
+		Customer: Customer{
+			Name:    "Ide Non No",
+			Address: "Ta No Tsu",
+			Phone:   "(0120) 117 117",
+		},
+		Number:  3003,
+		Balance: 100,
+	}
+
+	if len(got) != len(expected) {
+		t.Errorf("there is an unexpected test data in the db: %v", got)
+	}
+
+	for i := 0; i < len(got); i++ {
+		if !reflect.DeepEqual(got[i], expected[i]) {
+			t.Errorf("got unexpected data:\nexpected: %v\ngot: %v", expected, got)
+		}
+	}
+}
+
+func TestGetAccount(t *testing.T) {
+	err := InsertTestData()
+	if err != nil {
+		t.Errorf("failed to insert test data: %v", err)
+	}
+	defer DeleteTestData()
+
+	got, err := tnb.GetAccount(1001)
+	if err != nil {
+		t.Errorf("failed to get all accounts: %v", err)
+	}
+
+	expected := &Account{
+		Customer: Customer{
+			Name:    "John",
+			Address: "Los Angeles, California",
+			Phone:   "(213) 555 0147",
+		},
+		Number:  1001,
+		Balance: 100,
+	}
+
+	if !reflect.DeepEqual(got, expected) {
+		t.Errorf("got unexpected data:\nexpected: %v\ngot: %v", expected, got)
+	}
+
+}
+
 func TestCreateAccount(t *testing.T) {
 	err := InsertTestData()
 	if err != nil {

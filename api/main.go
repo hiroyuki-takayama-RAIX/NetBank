@@ -1,32 +1,76 @@
 package main
 
 import (
-	"fmt"
-	"log"
+	// "_" in import statement means blank import
+
 	"net/http"
 	"strconv"
 
-	// "_" in import statement means blank import
-	_ "github.com/jackc/pgx/v4/stdlib"
-
+	"github.com/gin-gonic/gin"
 	"github.com/hiroyuki-takayama-RAIX/core"
+	_ "github.com/jackc/pgx/v4/stdlib"
 )
 
 func main() {
-	// set statment as handler function in path
-	http.HandleFunc("/statement", statement)
-	http.HandleFunc("/withdraw", withdraw)
-	http.HandleFunc("/deposit", deposit)
-	http.HandleFunc("/transfer", transfer)
-	http.HandleFunc("/teapot", teapot)
-	http.HandleFunc("/createaccount", createAccount)
-	http.HandleFunc("/deleteaccount", deleteAccount)
+	router := gin.Default()
+	router.GET("/accounts", getAccounts)
+	router.GET("/accounts/:id", getAccount)
+	router.POST("/accounts", createAccount)
 
+	router.Run("localhost:8080")
+	// set statment as handler function in path
+	/*
+		http.HandleFunc("/statement", statement)
+		http.HandleFunc("/withdraw", withdraw)
+		http.HandleFunc("/deposit", deposit)
+		http.HandleFunc("/transfer", transfer)
+		http.HandleFunc("/teapot", teapot)
+		http.HandleFunc("/createaccount", createAccount)
+		http.HandleFunc("/deleteaccount", deleteAccount)
+	*/
 	// API URL の設計を見直す
 	// path parameter, query parameter, body parameter
 
 	// log.fatal show you log with date_time
-	log.Fatal(http.ListenAndServe("localhost:8000", nil))
+	// log.Fatal(http.ListenAndServe("localhost:8000", nil))
+}
+
+func getAccounts(c *gin.Context) {
+	nb, _ := core.NewNetBank()
+	/*
+		if err != nil {
+			http.Error(w, "initialize error!", http.StatusBadRequest)
+		}
+	*/
+	defer nb.Close()
+
+	accounts, _ := nb.GetAccounts()
+	c.IndentedJSON(http.StatusOK, accounts)
+}
+
+func getAccount(c *gin.Context) {
+	nb, _ := core.NewNetBank()
+	/*
+		if err != nil {
+			http.Error(w, "initialize error!", http.StatusBadRequest)
+		}
+	*/
+	defer nb.Close()
+
+	param := c.Param("id")
+	id, _ := strconv.Atoi(param)
+	/*
+		if err != nil {
+			errors.Errorf("got %v as invailed id: %v", param, err)
+		}
+	*/
+
+	accounts, _ := nb.GetAccount(id)
+	c.IndentedJSON(http.StatusOK, accounts)
+}
+
+func createAccount(c *gin.Context) {
+
 }
 
 /*
@@ -35,11 +79,13 @@ api structure is as follows.
 2. lines refering to method you wanna use
 */
 
+/*
 func statement(w http.ResponseWriter, req *http.Request) {
 	nb, err := core.NewNetBank()
 	if err != nil {
 		http.Error(w, "initialize error!", http.StatusBadRequest)
 	}
+	defer nb.Close()
 
 	// parse request
 	numberqs := req.URL.Query().Get("number")
@@ -68,6 +114,7 @@ func deposit(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		http.Error(w, "initialize error!", http.StatusBadRequest)
 	}
+	defer nb.Close()
 
 	// make reqests each query.
 	numberqs := req.URL.Query().Get("number")
@@ -103,6 +150,7 @@ func withdraw(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		http.Error(w, "initialize error!", http.StatusBadRequest)
 	}
+	defer nb.Close()
 
 	// make reqests each query.
 	numberqs := req.URL.Query().Get("number")
@@ -139,6 +187,7 @@ func transfer(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		http.Error(w, "initialize error!", http.StatusBadRequest)
 	}
+	defer nb.Close()
 
 	// make reqests each query.
 	senderNumberqs := req.URL.Query().Get("from")
@@ -192,6 +241,7 @@ func createAccount(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		http.Error(w, "initialize error!", http.StatusBadRequest)
 	}
+	defer nb.Close()
 
 	// parse request
 	numberqs := req.URL.Query().Get("number")
@@ -228,6 +278,7 @@ func deleteAccount(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		http.Error(w, "initialize error!", http.StatusBadRequest)
 	}
+	defer nb.Close()
 
 	// parse request
 	numberqs := req.URL.Query().Get("number")
@@ -255,3 +306,4 @@ func deleteAccount(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 }
+*/

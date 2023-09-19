@@ -1,0 +1,20 @@
+FROM golang:1.21.1-alpine
+
+# set a directory for the app
+WORKDIR /usr/src/app
+
+# copy all the files to the container
+COPY . .
+
+# install dependencies
+RUN cd ./core
+RUN go mod tidy
+RUN cd ../api
+RUN go mod tidy
+RUN go build
+
+# define the port number the container should expose
+EXPOSE 5000
+
+# run the command
+CMD ["", "./app.py"]

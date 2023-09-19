@@ -1,11 +1,16 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"testing"
+
+	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/assert"
 
 	"github.com/hiroyuki-takayama-RAIX/core"
 )
@@ -35,8 +40,129 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
+func TestGetAccounts(t *testing.T) {
+	err := core.InsertTestData()
+	if err != nil {
+		t.Errorf("failed to insertTestData(): %v", err)
+	}
+	defer core.DeleteTestData()
+
+	// Create a new HTTP request to the "/albums" endpoint
+	req, err := http.NewRequest("GET", "/accounts", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Create a response recorder to capture the response
+	rr := httptest.NewRecorder()
+
+	// Create a new Gin router and handler function
+	router := gin.Default()
+	router.GET("/accounts", getAccounts)
+
+	// Serve the request and record the response
+	router.ServeHTTP(rr, req)
+
+	// Check the response status code
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: \n[got]\n%v \n[want]\n%v", status, http.StatusOK)
+	}
+
+	got := rr.Body.String()
+	expected := `[{"name":"John","address":"Los Angeles, California","phone":"(213) 555 0147","id":1001,"balance":100},{"name":"Ide Non No","address":"Ta No Tsu","phone":"(0120) 117 117","id":3003,"balance":100}]`
+
+	assert.JSONEq(t, got, expected)
+
+	// reflect.DeepEqual or general logical operator cannot compare got and expected...
+}
+
+func TestGetAccount(t *testing.T) {
+	err := core.InsertTestData()
+	if err != nil {
+		t.Errorf("failed to insertTestData(): %v", err)
+	}
+	defer core.DeleteTestData()
+
+	req, err := http.NewRequest("GET", "/accounts/1001", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+
+	router := gin.Default()
+	router.GET("/accounts/:id", getAccount)
+
+	router.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: \n[got]\n%v \n[want]\n%v", status, http.StatusOK)
+	}
+
+	got := rr.Body.String()
+	expected := `{"name":"John","address":"Los Angeles, California","phone":"(213) 555 0147","id":1001,"balance":100}`
+
+	assert.JSONEq(t, got, expected)
+}
+
+func TestPostAlbums(t *testing.T) {
+	err := core.InsertTestData()
+	if err != nil {
+		t.Errorf("failed to insertTestData(): %v", err)
+	}
+	defer core.DeleteTestData()
+
+	// Create a new Gin router
+	router := gin.Default()
+	router.POST("/albums", createAccount)
+
+	// Create a sample album to send in the request
+	account := core.Account{
+		Customer: core.Customer{
+			Name:    "C.J.",
+			Address: "Los Santos",
+			Phone:   "(080) 1457 9387",
+		},
+		Number:  4,
+		Balance: 100,
+	}
+
+	// Convert the newAlbum struct to JSON
+	j, err := json.Marshal(account)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Create a new HTTP request with the JSON data
+	req, err := http.NewRequest("POST", "/accounts", bytes.NewBuffer(j))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	// Create a response recorder to capture the response
+	rr := httptest.NewRecorder()
+
+	// Serve the request and record the response
+	router.ServeHTTP(rr, req)
+
+	// Check the response status code
+	if status := rr.Code; status != http.StatusCreated {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusCreated)
+	}
+
+	// Check the response body (JSON content)
+	got := rr.Body.String()
+	j, _ = json.Marshal(account)
+	expected := string(j)
+
+	// Check that the response matches the newAlbum we sent
+	assert.JSONEq(t, got, expected)
+}
+
 // i wanna change this name better...
 // this function get fixture and show test result.
+/*
 func CommonTestLogic(f *fixture, h func(w http.ResponseWriter, req *http.Request), t *testing.T) {
 	req, err := http.NewRequest("GET", f.request, nil)
 	if err != nil {
@@ -74,10 +200,11 @@ func TestStatement(t *testing.T) {
 		fs := []fixture{}
 		fs = append(fs, fixture{"successfully getting statement", 1001, fmt.Sprintf("%v - %s - %v", 1001, "John", 0)})
 		fs = append(fs, fixture{"account with number cant be found", 404, fmt.Sprintf("Account with number %v can't be found!", 404)})
-	*/
+*/
 
-	// upper lines are correct, but make()'s second argument is useful to make clear number of test pattern.
-	// *fixture means
+// upper lines are correct, but make()'s second argument is useful to make clear number of test pattern.
+// *fixture means
+/*
 	fs := make([]*fixture, 3)
 	fs[0] = &fixture{
 		name:         "Successfully getting statement",
@@ -92,7 +219,8 @@ func TestStatement(t *testing.T) {
 		expectedCode: http.StatusNotFound,
 		expectedBody: fmt.Sprintf("Account with number %v can't be found!\n", 404),
 	}
-	*/
+*/
+/*
 	fs[1] = &fixture{
 		name:         "Account number is missing",
 		request:      fmt.Sprintf("/statement?n=%v", 1001),
@@ -138,7 +266,8 @@ func TestDeposit(t *testing.T) {
 		expectedCode: http.StatusNotFound,
 		expectedBody: fmt.Sprintf("Account with number %v can't be found!\n", 404),
 	}
-	*/
+*/
+/*
 	fs[1] = &fixture{
 		name:         "Amount of deposit must be more than zero",
 		request:      "deposite?number=1001&amount=-20",
@@ -195,7 +324,8 @@ func TestWithdraw(t *testing.T) {
 		expectedCode: http.StatusBadRequest,
 		expectedBody: "Amount must be more than zero!\n",
 	}
-	*/
+*/
+/*
 	fs[1] = &fixture{
 		name:         "Invalid account number!",
 		request:      "/withdraw?number=千一&amount=20",
@@ -215,7 +345,8 @@ func TestWithdraw(t *testing.T) {
 			expectedCode: http.StatusBadRequest,
 			expectedBody: "Amount of withdraw must be more than deposit!\n",
 		}
-	*/
+*/
+/*
 
 	for i := 0; i < len(fs); i++ {
 		f := fs[i]
@@ -264,7 +395,8 @@ func TestTransfar(t *testing.T) {
 		expectedCode: http.StatusBadRequest,
 		expectedBody: "transfer is greater than deposit!\n",
 	}
-	*/
+*/
+/*
 	fs[1] = &fixture{
 		name:         "Invalid sender's account number!",
 		request:      "/transfer?from=千一&to=2002&amount=100",
@@ -361,3 +493,4 @@ func TestDeleteAccount(t *testing.T) {
 		})
 	}
 }
+*/
