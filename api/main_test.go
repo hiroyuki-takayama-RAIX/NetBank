@@ -16,10 +16,11 @@ import (
 )
 
 type fixture struct {
-	name         string
-	request      string
-	expectedCode int
-	expectedBody string
+	name      string
+	uri       string
+	bodyParam string
+	code      int
+	body      string
 }
 
 func TestMain(m *testing.M) {
@@ -41,39 +42,47 @@ func TestMain(m *testing.M) {
 }
 
 func TestGetAccounts(t *testing.T) {
+	// set beforeEach and afterEach functoins.
 	err := core.InsertTestData()
 	if err != nil {
 		t.Errorf("failed to insertTestData(): %v", err)
 	}
 	defer core.DeleteTestData()
 
-	// Create a new HTTP request to the "/accounts" endpoint
-	req, err := http.NewRequest("GET", "/accounts", nil)
-	if err != nil {
-		t.Fatal(err)
+	fs := make([]*fixture, 1)
+	fs[0] = &fixture{
+		name: "Successfully get all accounts.",
+		uri:  "/accounts",
+		code: http.StatusOK,
+		body: `[{"name":"John","address":"Los Angeles, California","phone":"(213) 555 0147","id":1001,"balance":100},{"name":"Ide Non No","address":"Ta No Tsu","phone":"(0120) 117 117","id":3003,"balance":100}]`,
 	}
 
-	// Create a response recorder to capture the response
-	rr := httptest.NewRecorder()
+	for _, f := range fs {
+		t.Run(f.name, func(t *testing.T) {
+			// Create a new HTTP request
+			req, err := http.NewRequest("GET", f.uri, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
 
-	// Create a new Gin router and handler function
-	router := gin.Default()
-	router.GET("/accounts", getAccounts)
+			// Create a response recorder to capture the response
+			rr := httptest.NewRecorder()
 
-	// Serve the request and record the response
-	router.ServeHTTP(rr, req)
+			// Create a new Gin router and handler function
+			router := gin.Default()
+			router.GET("/accounts", getAccounts)
 
-	// Check the response status code
-	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+			// Serve the request and record the response
+			router.ServeHTTP(rr, req)
+
+			// Check the response status code
+			assert.Equal(t, f.code, rr.Code)
+
+			// Compare actual response and expected response
+			// reflect.DeepEqual or general logical operator cannot compare got and expected...
+			assert.JSONEq(t, f.body, rr.Body.String())
+		})
 	}
-
-	got := rr.Body.String()
-	expected := `[{"name":"John","address":"Los Angeles, California","phone":"(213) 555 0147","id":1001,"balance":100},{"name":"Ide Non No","address":"Ta No Tsu","phone":"(0120) 117 117","id":3003,"balance":100}]`
-
-	assert.JSONEq(t, got, expected)
-
-	// reflect.DeepEqual or general logical operator cannot compare got and expected...
 }
 
 func TestGetAccount(t *testing.T) {
@@ -83,27 +92,40 @@ func TestGetAccount(t *testing.T) {
 	}
 	defer core.DeleteTestData()
 
-	req, err := http.NewRequest("GET", "/accounts/1001", nil)
-	if err != nil {
-		t.Fatal(err)
+	fs := make([]*fixture, 3)
+	fs[0] = &fixture{
+		name: "Successfully get an account.",
+		uri:  "/accounts/1001",
+		code: http.StatusOK,
+		body: `{"name":"John","address":"Los Angeles, California","phone":"(213) 555 0147","id":1001,"balance":100}`,
+	}
+	fs[1] = &fixture{
+		name: "Invalied id number.",
+		uri:  "/accounts/千百一",
+		code: http.StatusBadRequest,
+		body: `{"error":"got 千百一 as invalied id"}`,
+	}
+	fs[2] = &fixture{
+		name: "Account not found.",
+		uri:  "/accounts/404",
+		code: http.StatusNotFound,
+		body: `{"error":"account(ID: 404) doesnt exist"}`,
 	}
 
-	rr := httptest.NewRecorder()
-
-	router := gin.Default()
-	router.GET("/accounts/:id", getAccount)
-
-	router.ServeHTTP(rr, req)
-
-	// Check the response status code
-	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	for _, f := range fs {
+		t.Run(f.name, func(t *testing.T) {
+			req, err := http.NewRequest("GET", f.uri, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			rr := httptest.NewRecorder()
+			router := gin.Default()
+			router.GET("/accounts/:id", getAccount)
+			router.ServeHTTP(rr, req)
+			assert.Equal(t, f.code, rr.Code)
+			assert.JSONEq(t, f.body, rr.Body.String())
+		})
 	}
-
-	got := rr.Body.String()
-	expected := `{"name":"John","address":"Los Angeles, California","phone":"(213) 555 0147","id":1001,"balance":100}`
-
-	assert.JSONEq(t, got, expected)
 }
 
 func TestCreateAccount(t *testing.T) {
@@ -113,64 +135,90 @@ func TestCreateAccount(t *testing.T) {
 	}
 	defer core.DeleteTestData()
 
-	// Create a new Gin router
-	router := gin.Default()
-	router.POST("/accounts", createAccount)
-
-	// Create a sample account to send in the request
-	c := core.Customer{
-		Name:    "C.J.",
-		Address: "Los Santos",
-		Phone:   "(080) 1457 9387",
+	fs := make([]*fixture, 5)
+	fs[0] = &fixture{
+		name:      "Successfully create an account.",
+		uri:       "/accounts",
+		bodyParam: `{"name":"John","address":"Los Angeles, California","phone":"(213) 555 0147"}`,
+		code:      http.StatusCreated,
+		body:      `{"name":"John","address":"Los Angeles, California","phone":"(213) 555 0147","id":0,"balance":0}`,
+	}
+	fs[1] = &fixture{
+		name:      "Invalied id number.",
+		uri:       "/accounts",
+		bodyParam: `{"name":"John","address":"Los Angeles, California","phone":"(213) 555 0147","id":1001,"balance":100}`,
+		code:      http.StatusBadRequest,
+		body:      `{"error":"Invalied request"}`,
+	}
+	fs[2] = &fixture{
+		name:      "Empty name",
+		uri:       "/accounts",
+		bodyParam: `{"name":"","address":"Los Angeles, California","phone":"(213) 555 0147"}`,
+		code:      http.StatusBadRequest,
+		body:      `{"error":"request has empty name"}`,
+	}
+	fs[3] = &fixture{
+		name:      "Empty address",
+		uri:       "/accounts",
+		bodyParam: `{"name":"John","address":"","phone":"(213) 555 0147"}`,
+		code:      http.StatusBadRequest,
+		body:      `{"error":"request has empty address"}`,
+	}
+	fs[4] = &fixture{
+		name:      "Empty phone number",
+		uri:       "/accounts",
+		bodyParam: `{"name":"John","address":"Los Angeles, California","phone":""}`,
+		code:      http.StatusBadRequest,
+		body:      `{"error":"request has empty phone number"}`,
 	}
 
-	// Convert the newaccount struct to JSON
-	j, err := json.Marshal(c)
-	if err != nil {
-		t.Fatal(err)
-	}
+	for _, f := range fs {
+		t.Run(f.name, func(t *testing.T) {
+			router := gin.Default()
+			router.POST("/accounts", createAccount)
 
-	// Create a new HTTP request with the JSON data
-	req, err := http.NewRequest("POST", "/accounts", bytes.NewBuffer(j))
-	if err != nil {
-		t.Fatal(err)
-	}
-	req.Header.Set("Content-Type", "application/json")
+			// Create a new HTTP request with the JSON data
+			bs := []byte(f.bodyParam)
+			req, err := http.NewRequest("POST", f.uri, bytes.NewBuffer(bs))
+			if err != nil {
+				t.Fatal(err)
+			}
+			req.Header.Set("Content-Type", "application/json")
 
-	// Create a response recorder to capture the response
-	rr := httptest.NewRecorder()
+			rr := httptest.NewRecorder()
+			router.ServeHTTP(rr, req)
+			assert.Equal(t, f.code, rr.Code)
 
-	// Serve the request and record the response
-	router.ServeHTTP(rr, req)
+			// parse response body as Account instance
+			var got core.Account
+			gotJSON := rr.Body.Bytes()
+			_ = json.Unmarshal(gotJSON, &got)
 
-	// Check the response status code
-	if status := rr.Code; status != http.StatusCreated {
-		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusCreated)
-	}
+			// expected response body
+			expected := &core.Account{
+				Customer: core.Customer{
+					Name:    "John",
+					Address: "Los Angeles, California",
+					Phone:   "(213) 555 0147",
+				},
+				Balance: 0,
+			}
 
-	// Check the response body (JSON content)
-	var got core.Account
-	gotJSON := rr.Body.Bytes()
-	_ = json.Unmarshal(gotJSON, &got)
-	expected := &core.Account{
-		Customer: c,
-		Number:   0,
-		Balance:  0,
-	}
+			// Check the response json except id because server assign random number to id
+			nameBool := got.Name == expected.Name
+			addressBool := got.Address == expected.Address
+			phoneBool := got.Phone == expected.Phone
+			balanceBool := got.Balance == expected.Balance
+			result := nameBool && addressBool && phoneBool && balanceBool
+			if result == false {
+				t.Errorf("except id in Account, handler returned wrong response body: \n[got]\n%v \n[want]\n%v", got, expected)
+			}
 
-	// Check that the response matches the newaccount we sent
-	nameBool := got.Name == expected.Name
-	addressBool := got.Address == expected.Address
-	phoneBool := got.Phone == expected.Phone
-	balanceBool := got.Balance == expected.Balance
-	result := nameBool && addressBool && phoneBool && balanceBool
-	if result == false {
-		t.Errorf("except id in Account, handler returned wrong response body: \n[got]\n%v \n[want]\n%v", got, expected)
-	}
-
-	idBool := (got.Number != 1001) && (got.Number != 3003)
-	if idBool == false {
-		t.Errorf("api registerd duplicate id: %v", got.Number)
+			idBool := (got.Number != 1001) && (got.Number != 3003)
+			if idBool == false {
+				t.Errorf("api registerd duplicate id: %v", got.Number)
+			}
+		})
 	}
 }
 

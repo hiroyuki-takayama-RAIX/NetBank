@@ -23,54 +23,89 @@ func main() {
 	router.Run("localhost:8080")
 }
 
+var hensuu int
+
 func getAccounts(c *gin.Context) {
-	nb, _ := core.NewNetBank()
-	/*
-		if err != nil {
-			http.Error(w, "initialize error!", http.StatusBadRequest)
-		}
-	*/
+	nb, err := core.NewNetBank()
+	if err != nil {
+		// Handle initialization error and send an error response
+		msg := fmt.Sprintf("failed to initialize netbank instance: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+		return
+	}
 	defer nb.Close()
 
-	accounts, _ := nb.GetAccounts()
-	c.IndentedJSON(http.StatusOK, accounts)
+	accounts, err := nb.GetAccounts()
+	if err != nil {
+		// Handle the error returned by nb.GetAccounts() and send an error response
+		// the frist arguement is actual status code, the second one is expected status code
+		msg := fmt.Sprintf("failed to get accounts: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+	} else {
+		// Send a successful response with the accounts data
+		c.IndentedJSON(http.StatusOK, accounts)
+	}
 }
 
 func getAccount(c *gin.Context) {
-	nb, _ := core.NewNetBank()
-	/*
-		if err != nil {
-			http.Error(w, "initialize error!", http.StatusBadRequest)
-		}
-	*/
+	nb, err := core.NewNetBank()
+	if err != nil {
+		msg := fmt.Sprintf("failed to initialize netbank instance: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+		return
+	}
 	defer nb.Close()
 
+	// parse and validate a path parameter
 	param := c.Param("id")
-	id, _ := strconv.Atoi(param)
-	/*
+	id, err := strconv.Atoi(param)
+	if err != nil {
+		msg := fmt.Sprintf("got %v as invalied id", param)
+		c.JSON(http.StatusBadRequest, gin.H{"error": msg})
+	} else {
+		account, err := nb.GetAccount(id)
 		if err != nil {
-			errors.Errorf("got %v as invailed id: %v", param, err)
+			msg := fmt.Sprintf("account(ID: %v) doesnt exist", id)
+			c.JSON(http.StatusNotFound, gin.H{"error": msg})
+		} else {
+			c.IndentedJSON(http.StatusOK, account)
 		}
-	*/
-
-	account, _ := nb.GetAccount(id)
-	c.IndentedJSON(http.StatusOK, account)
+	}
 }
 
 func createAccount(c *gin.Context) {
-	nb, _ := core.NewNetBank()
+	nb, err := core.NewNetBank()
+	if err != nil {
+		msg := fmt.Sprintf("failed to initialize netbank instance: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+		return
+	}
 	defer nb.Close()
 
-	// postaccounts adds an account from JSON received in the request body.
+	// mapping request body into empty customer variable
 	var customer core.Customer
+	err = c.BindJSON(&customer)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalied request"})
+	} else if customer.Name == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "request has empty name"})
+	} else if customer.Address == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "request has empty address"})
+	} else if customer.Phone == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "request has empty phone number"})
+	} else {
+		id, err := nb.CreateAccount(&customer)
+		if err != nil {
 
-	_ = c.BindJSON(&customer)
+		} else {
+			account, err := nb.GetAccount(id)
+			if err != nil {
 
-	id, _ := nb.CreateAccount(&customer)
-
-	account, _ := nb.GetAccount(id)
-
-	c.IndentedJSON(http.StatusCreated, account)
+			} else {
+				c.IndentedJSON(http.StatusCreated, account)
+			}
+		}
+	}
 }
 
 func deleteAccount(c *gin.Context) {
