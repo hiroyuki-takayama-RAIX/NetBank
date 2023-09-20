@@ -108,7 +108,7 @@ func TestGetAccounts(t *testing.T) {
 		Customer: Customer{
 			Name:    "John",
 			Address: "Los Angeles, California",
-			Phone:   "(213) 555 0147",
+			Phone:   "(213) 444 0147",
 		},
 		Number:  1001,
 		Balance: 100,
@@ -150,7 +150,7 @@ func TestGetAccount(t *testing.T) {
 		Customer: Customer{
 			Name:    "John",
 			Address: "Los Angeles, California",
-			Phone:   "(213) 555 0147",
+			Phone:   "(213) 444 0147",
 		},
 		Number:  1001,
 		Balance: 100,
@@ -207,16 +207,23 @@ func TestDeleteAccount(t *testing.T) {
 	}
 	defer DeleteTestData()
 
-	id := 2002
+	id := 1001
 
 	err = tnb.DeleteAccount(id)
 	if err != nil {
-		t.Errorf("failed to create a new account_%v: %v", id, err)
+		t.Errorf("failed to delete a new account_%v: %v", id, err)
 	}
 
 	_, err = tnb.Statement(id)
 	if err == nil {
 		t.Errorf("failed to delete account_%v", id)
+	}
+
+	id = 404
+
+	err = tnb.DeleteAccount(id)
+	if err == nil {
+		t.Errorf("account_%v shall not exist: %v", id, err)
 	}
 }
 
@@ -235,14 +242,9 @@ func TestUpdateAccount(t *testing.T) {
 		Phone:   "(080) 4075 8704",
 	}
 
-	err = tnb.UpdateAccount(id, c)
+	got, err := tnb.UpdateAccount(id, c)
 	if err != nil {
 		t.Errorf("failed to update account_%v info: %v", id, err)
-	}
-
-	got, err := tnb.GetAccount(id)
-	if err != nil {
-		t.Errorf("cannnot get account_%v: %v", id, err)
 	}
 
 	expected := &Account{
@@ -505,7 +507,7 @@ func TestDatabaseSql(t *testing.T) {
 		id    = 2002
 		name  = "C.J."
 		addr  = "Los Santos"
-		phone = "(213) 555 0147"
+		phone = "(213) 444 0147"
 	)
 
 	t.Run("INSERT", func(t *testing.T) {
@@ -645,7 +647,7 @@ func TestDatabaseSql(t *testing.T) {
 			balance: 100,
 			name:    "John",
 			addr:    "Los Angeles, California",
-			phone:   "(213) 555 0147",
+			phone:   "(213) 444 0147",
 		}
 
 		if reflect.DeepEqual(ss, expected) == false {

@@ -304,6 +304,12 @@ func (nb *netBank) DeleteAccount(num int) error {
 	}
 	defer tx.Rollback()
 
+	// check the existence of account having num as id.
+	_, err = nb.GetAccount(num)
+	if err != nil {
+		return err
+	}
+
 	// update the balance
 	q := `
 	DELETE FROM account 
@@ -438,10 +444,10 @@ func (nb *netBank) GetNewId() (int, error) {
 	return newID, nil
 }
 
-func (nb *netBank) UpdateAccount(id int, c *Customer) error {
+func (nb *netBank) UpdateAccount(id int, c *Customer) (*Account, error) {
 	tx, err := nb.Begin()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer tx.Rollback()
 
@@ -453,10 +459,15 @@ func (nb *netBank) UpdateAccount(id int, c *Customer) error {
 	`
 	_, err = tx.ExecContext(context.Background(), q, c.Name, c.Address, c.Phone, id)
 	if err != nil {
-		return err
+		return nil, err
 	} else {
 		tx.Commit()
 	}
 
-	return nil
+	account, err := nb.GetAccount(id)
+	if err != nil {
+		return nil, err
+	}
+
+	return account, nil
 }
