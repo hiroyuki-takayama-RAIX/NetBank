@@ -179,19 +179,14 @@ func TestCreateAccount(t *testing.T) {
 		Phone:   phone,
 	}
 
-	id, err := tnb.CreateAccount(c)
+	got, err := tnb.CreateAccount(c)
 	if err != nil {
-		t.Errorf("failed to create a new account_%v: %v", id, err)
-	}
-
-	got, err := tnb.GetAccount(id)
-	if err != nil {
-		t.Errorf("cannnot get account_%v: %v", id, err)
+		t.Errorf("failed to create a new account_%v: %v", got.Number, err)
 	}
 
 	expected := &Account{
 		Customer: *c,
-		Number:   id,
+		Number:   got.Number,
 		Balance:  0,
 	}
 

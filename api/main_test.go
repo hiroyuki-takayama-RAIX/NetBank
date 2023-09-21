@@ -406,3 +406,192 @@ func TestUpdateAccount(t *testing.T) {
 		})
 	}
 }
+
+/*
+func TestDeposit(t *testing.T) {
+	err := core.InsertTestData()
+	if err != nil {
+		t.Errorf("failed to insertTestData(): %v", err)
+	}
+	defer core.DeleteTestData()
+
+	f := &fixture{
+		name:      "Successfully deposit.",
+		uri:       "/accounts/1001",
+		bodyParam: `{"trade":"deposit","amount":"20"}`,
+		code:      http.StatusOK,
+		body:      `{"name":"John","address":"Los Angeles, California","phone":"(213) 444 0147","id":1001,"balance":120}`,
+	}
+
+	router := gin.Default()
+	router.PATCH("/accounts/:id", trading)
+	bs := []byte(f.bodyParam)
+	req, err := http.NewRequest("PATCH", f.uri, bytes.NewBuffer(bs))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	rr := httptest.NewRecorder()
+	router.ServeHTTP(rr, req)
+	assert.Equal(t, f.code, rr.Code)
+	assert.JSONEq(t, f.body, rr.Body.String())
+}
+
+func TestWithdraw(t *testing.T) {
+	err := core.InsertTestData()
+	if err != nil {
+		t.Errorf("failed to insertTestData(): %v", err)
+	}
+	defer core.DeleteTestData()
+
+	fs := make([]*fixture, 10)
+	fs[0] = &fixture{
+		name:      "Successfully withdraw",
+		uri:       "/accounts/1001",
+		bodyParam: `{"trade":"withdraw","amount":"20"}`,
+		code:      http.StatusOK,
+		body:      `{"name":"John","address":"Los Angeles, California","phone":"(213) 444 0147","id":1001,"balance":80}`,
+	}
+	fs[1] = &fixture{
+		name:      "Amount is grater than balance",
+		uri:       "/accounts/1001",
+		bodyParam: `{"trade":"withdraw","amount":"120"}`,
+		code:      http.StatusBadRequest,
+		body:      `{"error":"amount is grater than the balance. your amount is 120, but the balance is 100"}`,
+	}
+
+	for _, f := range fs {
+		t.Run(f.name, func(t *testing.T) {
+			router := gin.Default()
+			router.PATCH("/accounts/:id", trading)
+			bs := []byte(f.bodyParam)
+			req, err := http.NewRequest("PATCH", f.uri, bytes.NewBuffer(bs))
+			if err != nil {
+				t.Fatal(err)
+			}
+			req.Header.Set("Content-Type", "application/json")
+			rr := httptest.NewRecorder()
+			router.ServeHTTP(rr, req)
+			assert.Equal(t, f.code, rr.Code)
+			assert.JSONEq(t, f.body, rr.Body.String())
+		})
+	}
+}
+
+func TestTransfer(t *testing.T) {
+	err := core.InsertTestData()
+	if err != nil {
+		t.Errorf("failed to insertTestData(): %v", err)
+	}
+	defer core.DeleteTestData()
+
+	fs := make([]*fixture, 10)
+	fs[0] = &fixture{
+		name:      "Successfully transfer",
+		uri:       "/accounts/1001",
+		bodyParam: `{"trade":"transfer","amount":"120","to":3003}`,
+		code:      http.StatusOK,
+		body:      `[{"name":"John","address":"Los Angeles, California","phone":"(213) 444 0147","id":1001,"balance":80},{"name":"Ide Non No","address":"Ta No Tsu","phone":"(0120) 117 117","id":3003,"balance":120}]`,
+	}
+	fs[2] = &fixture{
+		name:      "Amount is grater than balance",
+		uri:       "/accounts/1001",
+		bodyParam: `{"trade":"withdraw","amount":"120","to":3003}`,
+		code:      http.StatusBadRequest,
+		body:      `{"error":"amount is grater than the balance. your amount is 120, but the balance is 100"}`,
+	}
+	fs[3] = &fixture{
+		name:      "Reciever's account not found",
+		uri:       "/accounts/1001",
+		bodyParam: `{"trade":"withdraw","amount":"20","to":404}`,
+		code:      http.StatusNotFound,
+		body:      `{"error":"reciever's account(ID: 404) is not found"}`,
+	}
+
+	for _, f := range fs {
+		t.Run(f.name, func(t *testing.T) {
+			router := gin.Default()
+			router.PATCH("/accounts/:id", trading)
+			bs := []byte(f.bodyParam)
+			req, err := http.NewRequest("PATCH", f.uri, bytes.NewBuffer(bs))
+			if err != nil {
+				t.Fatal(err)
+			}
+			req.Header.Set("Content-Type", "application/json")
+			rr := httptest.NewRecorder()
+			router.ServeHTTP(rr, req)
+			assert.Equal(t, f.code, rr.Code)
+			assert.JSONEq(t, f.body, rr.Body.String())
+		})
+	}
+}
+
+func TestTrading(t *testing.T) {
+	err := core.InsertTestData()
+	if err != nil {
+		t.Errorf("failed to insertTestData(): %v", err)
+	}
+	defer core.DeleteTestData()
+
+	fs := make([]*fixture, 10)
+	fs[1] = &fixture{
+		name:      "Amount is less than zero",
+		uri:       "/accounts/1001",
+		bodyParam: `{"trade":"deposite","amount":"-20"}`,
+		code:      http.StatusBadRequest,
+		body:      `{"error":"amount is less than zero. your input is -20"}`,
+	}
+	fs[2] = &fixture{
+		name:      "Invalied amount",
+		uri:       "/accounts/1001",
+		bodyParam: `{"trade":"deposite","amount":"¥20"}`,
+		code:      http.StatusBadRequest,
+		body:      `{"error":"Invalied amount. your input is ¥20}`,
+	}
+	fs[3] = &fixture{
+		name:      "Invalied id number.",
+		uri:       "/accounts/千百一",
+		bodyParam: `{"trade":"deposite","amount":"¥20"}`,
+		code:      http.StatusBadRequest,
+		body:      `{"error":"got 千百一 as invalied id"}`,
+	}
+	fs[4] = &fixture{
+		name:      "Account not found",
+		uri:       "/accounts/404",
+		bodyParam: `{"trade":"deposite","amount":"¥20"}`,
+		code:      http.StatusNotFound,
+		body:      `{"error":"account(ID: 404) doesnt exist"}`,
+	}
+	fs[5] = &fixture{
+		name:      "Invalied trade",
+		uri:       "/accounts/1001",
+		bodyParam: `{"trade":"foerign exchange","amount":"100"}`,
+		code:      http.StatusNotFound,
+		body:      `{"error":"you about to do foreign exchange, but its not defined."}`,
+	}
+		fs[6] = &fixture{
+			name:      "Balance is less than zero",
+			uri:       "/accounts/1234",
+			bodyParam: `{"trade":"foerign exchange","amount":"100"}`,
+			code:      http.StatusNotFound,
+			body:      `{"error":"initially the balance is less than zero. yout present balance is 0"}`,
+		}
+
+	for _, f := range fs {
+		t.Run(f.name, func(t *testing.T) {
+			router := gin.Default()
+			router.PATCH("/accounts/:id", trading)
+			bs := []byte(f.bodyParam)
+			req, err := http.NewRequest("PATCH", f.uri, bytes.NewBuffer(bs))
+			if err != nil {
+				t.Fatal(err)
+			}
+			req.Header.Set("Content-Type", "application/json")
+			rr := httptest.NewRecorder()
+			router.ServeHTTP(rr, req)
+			assert.Equal(t, f.code, rr.Code)
+			assert.JSONEq(t, f.body, rr.Body.String())
+		})
+	}
+}
+*/
