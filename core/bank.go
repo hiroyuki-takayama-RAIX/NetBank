@@ -339,7 +339,7 @@ func (nb *netBank) DeleteAccount(num int) error {
 	return nil
 }
 
-func (nb *netBank) GetAccounts() ([]*Account, error) {
+func (nb *netBank) GetAccounts(min float64, max float64) ([]*Account, error) {
 	var (
 		name    string
 		address string
@@ -351,8 +351,9 @@ func (nb *netBank) GetAccounts() ([]*Account, error) {
 	q := `SELECT username, addr, phone, account.id, balance 
 	      FROM account 
 		  INNER JOIN customer 
-		  ON account.id=customer.id;`
-	rows, err := nb.db.QueryContext(context.Background(), q)
+		  ON account.id=customer.id
+		  WHERE balance>=$1 AND balance<=$2;`
+	rows, err := nb.db.QueryContext(context.Background(), q, min, max)
 	if err != nil {
 		return nil, err
 	}

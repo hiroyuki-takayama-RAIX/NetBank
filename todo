@@ -1,50 +1,18 @@
-<core package 関連>
-[x] statementメソッドで"select * from ~"ができるようにする
-  [x] "*JOIN ~" のクエリでどのような挙動をするか確認する
-[x] depositeメソッドで"update * ~" ができるようにする
-[x] waccountshdrawメソッドで"update * ~" ができるようにする
-[x] transferメソッドで"update * ~"　ができるようにする
-[x] Accountのメソッドを削除する
-[x] createAccountメソッドを作り、"insert *"ができるようにする
-[x] deleteAccountメソッドを作り、"delete *"が出るようにする
-  [-] 存在しないaccountsのaccountの明細を出そうとしたらエラー分が表示されるようにする
-[x] テストコードにbeforeEach を作成
-[x] テストコードにafterEach を作成
-
-<api package 関連>
-[x] statement関数を改良
-[x] deposit関数を改良
-[x] withdraw関数を改良
-[x] transfer関数を改良
-[] createAccount関数を改良
-[] deleteAccount関数を改良
-
-<crudやること>
-[x] withdrawのエラーを解消する
-
-<env>
-[x] unitテスト用のテーブル、本番用のテーブルを作成する
-[] main.goをコンテナ上で起動できるようにする
-[] サーバー起動時に毎回任意のポート番号を割り当てるようにする
-
-
-
-<apiの改修>
+<API Document>
 accounts/　
-  GET => 全てのアカウントをJSONとして取得する。新しい関数 => done
+  GET => 全てのアカウント情報を取得。
 
 accounts/{number}/
-  GET => numberに合致するアカウント情報をjsonとして取得する。statement => done
-  DELETE => numberに合致するwアカウントをDBから削除する。deleteAccount
+  GET => 指定したIDに合致するアカウントの情報をjsonとして取得する。
+  DELETE => 指定したIDに合致するアカウントを削除する
 
 accounts/{number}/ + bodyParameter
-  POST => 新しいアカウントを作成するための情報をJSONで送信し、登録する。=> done
-    [] change request body only customer struct
+  POST => 新しいアカウントを作成するための情報をJSONで送信し、登録する。
   PUT => アカウント情報を変更する
-  PATCH => 預金残高を変更させる。deposit, withdraw, transfer
+  PATCH => 預金残高を変更させる。ボディパラメーターの"trade"の値によって預金・引き出し・送金を切り替える
 
 accounts/{number}/balance
-  GET => 指定のaccountsの預金残高を取得
+  GET => 指定のIDの預金残高を取得
 
-accounts/balance?amount={number}
-  GET => 指定の預金残高を持っているアカウントの情報を取得 
+accounts/balance?max-amount={number}&min-amount={number}
+  GET => 指定の預金残高を持っているアカウントの情報を取得

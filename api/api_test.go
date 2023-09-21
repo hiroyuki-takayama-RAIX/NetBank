@@ -1,4 +1,4 @@
-package main
+package api
 
 import (
 	"bytes"
@@ -51,7 +51,7 @@ func TestGetAccounts(t *testing.T) {
 
 	fs := make([]*fixture, 1)
 	fs[0] = &fixture{
-		name: "Successfully get all accounts.",
+		name: "Successfully Get all accounts.",
 		uri:  "/accounts",
 		code: http.StatusOK,
 		body: `[{"name":"John","address":"Los Angeles, California","phone":"(213) 444 0147","id":1001,"balance":100},{"name":"Ide Non No","address":"Ta No Tsu","phone":"(0120) 117 117","id":3003,"balance":100}]`,
@@ -60,7 +60,7 @@ func TestGetAccounts(t *testing.T) {
 	for _, f := range fs {
 		t.Run(f.name, func(t *testing.T) {
 			// Create a new HTTP request
-			req, err := http.NewRequest("GET", f.uri, nil)
+			req, err := http.NewRequest("Get", f.uri, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -70,7 +70,7 @@ func TestGetAccounts(t *testing.T) {
 
 			// Create a new Gin router and handler function
 			router := gin.Default()
-			router.GET("/accounts", getAccounts)
+			router.GET("/accounts", GetAccounts)
 
 			// Serve the request and record the response
 			router.ServeHTTP(rr, req)
@@ -94,7 +94,7 @@ func TestGetAccount(t *testing.T) {
 
 	fs := make([]*fixture, 3)
 	fs[0] = &fixture{
-		name: "Successfully get an account.",
+		name: "Successfully Get an account.",
 		uri:  "/accounts/1001",
 		code: http.StatusOK,
 		body: `{"name":"John","address":"Los Angeles, California","phone":"(213) 444 0147","id":1001,"balance":100}`,
@@ -114,13 +114,13 @@ func TestGetAccount(t *testing.T) {
 
 	for _, f := range fs {
 		t.Run(f.name, func(t *testing.T) {
-			req, err := http.NewRequest("GET", f.uri, nil)
+			req, err := http.NewRequest("Get", f.uri, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
 			rr := httptest.NewRecorder()
 			router := gin.Default()
-			router.GET("/accounts/:id", getAccount)
+			router.GET("/accounts/:id", GetAccount)
 			router.ServeHTTP(rr, req)
 			assert.Equal(t, f.code, rr.Code)
 			assert.JSONEq(t, f.body, rr.Body.String())
@@ -137,7 +137,7 @@ func TestCreateAccount(t *testing.T) {
 
 	fs := make([]*fixture, 8)
 	fs[0] = &fixture{
-		name:      "Successfully create an account.",
+		name:      "Successfully Create an account.",
 		uri:       "/accounts",
 		bodyParam: `{"name":"John","address":"Los Angeles, California","phone":"(213) 444 0147"}`,
 		code:      http.StatusCreated,
@@ -205,7 +205,7 @@ func TestCreateAccount(t *testing.T) {
 	for _, f := range fs {
 		t.Run(f.name, func(t *testing.T) {
 			router := gin.Default()
-			router.POST("/accounts", createAccount)
+			router.POST("/accounts", CreateAccount)
 
 			// Create a new HTTP request with the JSON data
 			bs := []byte(f.bodyParam)
@@ -289,7 +289,7 @@ func TestDeleteAccount(t *testing.T) {
 			}
 			rr := httptest.NewRecorder()
 			router := gin.Default()
-			router.DELETE("/accounts/:id", deleteAccount)
+			router.DELETE("/accounts/:id", DeleteAccount)
 			router.ServeHTTP(rr, req)
 			assert.Equal(t, f.code, rr.Code)
 			if f.code == 204 {
@@ -392,7 +392,7 @@ func TestUpdateAccount(t *testing.T) {
 	for _, f := range fs {
 		t.Run(f.name, func(t *testing.T) {
 			router := gin.Default()
-			router.PUT("/accounts/:id", updateAccount)
+			router.PUT("/accounts/:id", UpdateAccount)
 			bs := []byte(f.bodyParam)
 			req, err := http.NewRequest("PUT", f.uri, bytes.NewBuffer(bs))
 			if err != nil {

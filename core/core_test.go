@@ -98,7 +98,7 @@ func TestGetAccounts(t *testing.T) {
 	}
 	defer DeleteTestData()
 
-	got, err := tnb.GetAccounts()
+	got, err := tnb.GetAccounts(0, 2147483647)
 	if err != nil {
 		t.Errorf("failed to get all accounts: %v", err)
 	}

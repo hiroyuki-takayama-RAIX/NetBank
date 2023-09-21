@@ -1,4 +1,4 @@
-package main
+package api
 
 import (
 	// "_" in import statement means blank import
@@ -12,19 +12,7 @@ import (
 	_ "github.com/jackc/pgx/v4/stdlib"
 )
 
-func main() {
-	router := gin.Default()
-	router.GET("/accounts", getAccounts)
-	router.GET("/accounts/:id", getAccount)
-	router.POST("/accounts", createAccount)
-	router.DELETE("/accounts/:id", deleteAccount)
-	router.PUT("/accounts/:id", updateAccount)
-	router.GET("/accounts/:id/balance", getBalance)
-
-	router.Run("localhost:8080")
-}
-
-func getAccounts(c *gin.Context) {
+func GetAccounts(c *gin.Context) {
 	nb, err := core.NewNetBank()
 	if err != nil {
 		// Handle initialization error and send an error response
@@ -33,8 +21,6 @@ func getAccounts(c *gin.Context) {
 		return
 	}
 	defer nb.Close()
-
-	accounts, err := nb.GetAccounts()
 
 	minBalanceStr := c.DefaultQuery("min-balance", "0")          // Default value is "0"
 	maxBalanceStr := c.DefaultQuery("max-balance", "2147483647") // Default value is "0"
@@ -52,25 +38,19 @@ func getAccounts(c *gin.Context) {
 		return
 	}
 
-	filteredAccounts := []*core.Account{}
-	for _, acc := range accounts {
-		if acc.Balance >= minBalance && (maxBalance == 0 || acc.Balance <= maxBalance) {
-			filteredAccounts = append(filteredAccounts, acc)
-		}
-	}
-
+	accounts, err := nb.GetAccounts(minBalance, maxBalance)
 	if err != nil {
 		// Handle the error returned by nb.GetAccounts() and send an error response
 		// the frist arguement is actual status code, the second one is expected status code
-		msg := fmt.Sprintf("failed to get accounts: %v", err)
+		msg := fmt.Sprintf("failed to Get accounts: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
 	} else {
 		// Send a successful response with the accounts data
-		c.IndentedJSON(http.StatusOK, filteredAccounts)
+		c.IndentedJSON(http.StatusOK, accounts)
 	}
 }
 
-func getAccount(c *gin.Context) {
+func GetAccount(c *gin.Context) {
 	nb, err := core.NewNetBank()
 	if err != nil {
 		msg := fmt.Sprintf("failed to initialize netbank instance: %v", err)
@@ -96,7 +76,7 @@ func getAccount(c *gin.Context) {
 	}
 }
 
-func createAccount(c *gin.Context) {
+func CreateAccount(c *gin.Context) {
 	nb, err := core.NewNetBank()
 	if err != nil {
 		msg := fmt.Sprintf("failed to initialize netbank instance: %v", err)
@@ -126,7 +106,7 @@ func createAccount(c *gin.Context) {
 	}
 }
 
-func deleteAccount(c *gin.Context) {
+func DeleteAccount(c *gin.Context) {
 	nb, err := core.NewNetBank()
 	if err != nil {
 		msg := fmt.Sprintf("failed to initialize netbank instance: %v", err)
@@ -151,7 +131,7 @@ func deleteAccount(c *gin.Context) {
 	}
 }
 
-func updateAccount(c *gin.Context) {
+func UpdateAccount(c *gin.Context) {
 	nb, err := core.NewNetBank()
 	if err != nil {
 		msg := fmt.Sprintf("failed to initialize netbank instance: %v", err)
@@ -188,6 +168,7 @@ func updateAccount(c *gin.Context) {
 	}
 }
 
+/*
 type trade struct {
 	kind   string
 	amount float64
@@ -200,7 +181,6 @@ const (
 	TRANSFER = "transfer"
 )
 
-/*
 func trading(c *gin.Context) {
 	nb, err := core.NewNetBank()
 	if err != nil {
@@ -231,7 +211,7 @@ func trading(c *gin.Context) {
 }
 */
 
-func getBalance(c *gin.Context) {
+func GetBalance(c *gin.Context) {
 	nb, err := core.NewNetBank()
 	if err != nil {
 		msg := fmt.Sprintf("failed to initialize netbank instance: %v", err)
