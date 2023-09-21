@@ -18,90 +18,241 @@ func main() {
 	router.GET("/accounts/:id", getAccount)
 	router.POST("/accounts", createAccount)
 	router.DELETE("/accounts/:id", deleteAccount)
-	router.PUT("/accountts/:id", updateAccount)
+	router.PUT("/accounts/:id", updateAccount)
+	router.GET("/accounts/:id/balance", getBalance)
 
 	router.Run("localhost:8080")
 }
 
 func getAccounts(c *gin.Context) {
-	nb, _ := core.NewNetBank()
-	/*
-		if err != nil {
-			http.Error(w, "initialize error!", http.StatusBadRequest)
-		}
-	*/
+	nb, err := core.NewNetBank()
+	if err != nil {
+		// Handle initialization error and send an error response
+		msg := fmt.Sprintf("failed to initialize netbank instance: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+		return
+	}
 	defer nb.Close()
 
-	accounts, _ := nb.GetAccounts()
-	c.IndentedJSON(http.StatusOK, accounts)
+	accounts, err := nb.GetAccounts()
+
+	minBalanceStr := c.DefaultQuery("min-balance", "0")          // Default value is "0"
+	maxBalanceStr := c.DefaultQuery("max-balance", "2147483647") // Default value is "0"
+
+	// Convert query parameters to float64
+	minBalance, err := strconv.ParseFloat(minBalanceStr, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid 'minBalance' parameter"})
+		return
+	}
+
+	maxBalance, err := strconv.ParseFloat(maxBalanceStr, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid 'maxBalance' parameter"})
+		return
+	}
+
+	filteredAccounts := []*core.Account{}
+	for _, acc := range accounts {
+		if acc.Balance >= minBalance && (maxBalance == 0 || acc.Balance <= maxBalance) {
+			filteredAccounts = append(filteredAccounts, acc)
+		}
+	}
+
+	if err != nil {
+		// Handle the error returned by nb.GetAccounts() and send an error response
+		// the frist arguement is actual status code, the second one is expected status code
+		msg := fmt.Sprintf("failed to get accounts: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+	} else {
+		// Send a successful response with the accounts data
+		c.IndentedJSON(http.StatusOK, filteredAccounts)
+	}
 }
 
 func getAccount(c *gin.Context) {
-	nb, _ := core.NewNetBank()
-	/*
-		if err != nil {
-			http.Error(w, "initialize error!", http.StatusBadRequest)
-		}
-	*/
+	nb, err := core.NewNetBank()
+	if err != nil {
+		msg := fmt.Sprintf("failed to initialize netbank instance: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+		return
+	}
 	defer nb.Close()
 
+	// parse and validate a path parameter
 	param := c.Param("id")
-	id, _ := strconv.Atoi(param)
-	/*
+	id, err := strconv.Atoi(param)
+	if err != nil {
+		msg := fmt.Sprintf("got %v as invalied id", param)
+		c.JSON(http.StatusBadRequest, gin.H{"error": msg})
+	} else {
+		account, err := nb.GetAccount(id)
 		if err != nil {
-			errors.Errorf("got %v as invailed id: %v", param, err)
+			msg := fmt.Sprintf("account(ID: %v) doesnt exist", id)
+			c.JSON(http.StatusNotFound, gin.H{"error": msg})
+		} else {
+			c.IndentedJSON(http.StatusOK, account)
 		}
-	*/
-
-	account, _ := nb.GetAccount(id)
-	c.IndentedJSON(http.StatusOK, account)
+	}
 }
 
 func createAccount(c *gin.Context) {
-	nb, _ := core.NewNetBank()
+	nb, err := core.NewNetBank()
+	if err != nil {
+		msg := fmt.Sprintf("failed to initialize netbank instance: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+		return
+	}
 	defer nb.Close()
 
-	// postaccounts adds an account from JSON received in the request body.
+	// mapping request body into empty customer variable
 	var customer core.Customer
-
-	_ = c.BindJSON(&customer)
-
-	id, _ := nb.CreateAccount(&customer)
-
-	account, _ := nb.GetAccount(id)
-
-	c.IndentedJSON(http.StatusCreated, account)
+	err = c.BindJSON(&customer)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalied request"})
+	} else if customer.Name == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "request has empty name"})
+	} else if customer.Address == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "request has empty address"})
+	} else if customer.Phone == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "request has empty phone number"})
+	} else {
+		account, err := nb.CreateAccount(&customer)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create a new account"})
+		} else {
+			c.IndentedJSON(http.StatusCreated, account)
+		}
+	}
 }
 
 func deleteAccount(c *gin.Context) {
-	nb, _ := core.NewNetBank()
+	nb, err := core.NewNetBank()
+	if err != nil {
+		msg := fmt.Sprintf("failed to initialize netbank instance: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+		return
+	}
 	defer nb.Close()
 
 	param := c.Param("id")
-	id, _ := strconv.Atoi(param)
-
-	_ = nb.DeleteAccount(id)
-
-	response := fmt.Sprintf("successfully delete account(ID: %v)", id)
-	c.IndentedJSON(http.StatusOK, response)
+	id, err := strconv.Atoi(param)
+	if err != nil {
+		msg := fmt.Sprintf("got %v as invalied id", param)
+		c.JSON(http.StatusBadRequest, gin.H{"error": msg})
+	} else {
+		err := nb.DeleteAccount(id)
+		if err != nil {
+			msg := fmt.Sprintf("account(ID: %v) doesnt exist", id)
+			c.JSON(http.StatusNotFound, gin.H{"error": msg})
+		} else {
+			c.Status(http.StatusNoContent)
+		}
+	}
 }
 
 func updateAccount(c *gin.Context) {
-	nb, _ := core.NewNetBank()
+	nb, err := core.NewNetBank()
+	if err != nil {
+		msg := fmt.Sprintf("failed to initialize netbank instance: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+		return
+	}
 	defer nb.Close()
 
 	param := c.Param("id")
-	id, _ := strconv.Atoi(param)
+	id, err := strconv.Atoi(param)
+	if err != nil {
+		msg := fmt.Sprintf("got %v as invalied id", param)
+		c.JSON(http.StatusBadRequest, gin.H{"error": msg})
+	} else {
+		var customer core.Customer
+		err = c.BindJSON(&customer)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalied request"})
+		} else if customer.Name == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "request has empty name"})
+		} else if customer.Address == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "request has empty address"})
+		} else if customer.Phone == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "request has empty phone number"})
+		} else {
+			account, err := nb.UpdateAccount(id, &customer)
+			if err != nil {
+				msg := fmt.Sprintf("account(ID: %v) doesnt exist", id)
+				c.JSON(http.StatusNotFound, gin.H{"error": msg})
+			} else {
+				c.IndentedJSON(http.StatusCreated, account)
+			}
+		}
+	}
+}
 
-	var customer core.Customer
-	_ = c.BindJSON(&customer)
+type trade struct {
+	kind   string
+	amount float64
+	to     int
+}
 
-	fmt.Println(id)
+const (
+	DEPOSIT  = "deposit"
+	WITHDRAW = "withdraw"
+	TRANSFER = "transfer"
+)
 
-	_ = nb.UpdateAccount(id, &customer)
+/*
+func trading(c *gin.Context) {
+	nb, err := core.NewNetBank()
+	if err != nil {
+		msg := fmt.Sprintf("failed to initialize netbank instance: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+		return
+	}
+	defer nb.Close()
 
-	account, _ := nb.GetAccount(id)
-	customer = account.Customer
+	param := c.Param("id")
+	id, err := strconv.Atoi(param)
+	if err != nil {
+		msg := fmt.Sprintf("got %v as invalied id", param)
+		c.JSON(http.StatusBadRequest, gin.H{"error": msg})
+	} else {
+		var trading trade
+		err = c.BindJSON(&trading)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalied request"})
+		} else if trading.kind != DEPOSIT && trading.kind != WITHDRAW && trading.kind != TRANSFER {
+			msg := fmt.Sprintf("you about to do %v, but its not defined.", trading.kind)
+			c.JSON(http.StatusBadRequest, gin.H{"error": msg})
+		} else if trading.amount == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "request has empty address"})
+		} else if trading.Phone == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "request has empty phone number"})
+	}
+}
+*/
 
-	c.IndentedJSON(http.StatusOK, customer)
+func getBalance(c *gin.Context) {
+	nb, err := core.NewNetBank()
+	if err != nil {
+		msg := fmt.Sprintf("failed to initialize netbank instance: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
+		return
+	}
+	defer nb.Close()
+
+	// parse and validate a path parameter
+	param := c.Param("id")
+	id, err := strconv.Atoi(param)
+	if err != nil {
+		msg := fmt.Sprintf("got %v as invalied id", param)
+		c.JSON(http.StatusBadRequest, gin.H{"error": msg})
+	} else {
+		balance, err := nb.GetBalance(id)
+		if err != nil {
+			msg := fmt.Sprintf("account(ID: %v) doesnt exist", id)
+			c.JSON(http.StatusNotFound, gin.H{"error": msg})
+		} else {
+			c.IndentedJSON(http.StatusOK, balance)
+		}
+	}
 }

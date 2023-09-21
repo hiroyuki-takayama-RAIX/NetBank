@@ -262,16 +262,16 @@ func (nb *netBank) Transfer(sender int, reciever int, money float64) error {
 	return nil
 }
 
-func (nb *netBank) CreateAccount(c *Customer) (int, error) {
+func (nb *netBank) CreateAccount(c *Customer) (*Account, error) {
 	tx, err := nb.db.Begin()
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 	defer tx.Rollback()
 
 	id, err := nb.GetNewId()
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 
 	// update the balance
@@ -281,7 +281,7 @@ func (nb *netBank) CreateAccount(c *Customer) (int, error) {
 	`
 	_, err = tx.ExecContext(context.Background(), q, id, c.Name, c.Address, c.Phone)
 	if err != nil {
-		return 0, err
+		return nil, err
 	} else {
 		q := `
 		INSERT INTO account (id, balance) 
@@ -289,12 +289,17 @@ func (nb *netBank) CreateAccount(c *Customer) (int, error) {
 		`
 		_, err = tx.ExecContext(context.Background(), q, id, float64(0))
 		if err != nil {
-			return 0, err
+			return nil, err
 		} else {
 			tx.Commit()
 		}
 	}
-	return id, nil
+
+	account, err := nb.GetAccount(id)
+	if err != nil {
+		return nil, err
+	}
+	return account, nil
 }
 
 func (nb *netBank) DeleteAccount(num int) error {
@@ -303,6 +308,12 @@ func (nb *netBank) DeleteAccount(num int) error {
 		return err
 	}
 	defer tx.Rollback()
+
+	// check the existence of account having num as id.
+	_, err = nb.GetAccount(num)
+	if err != nil {
+		return err
+	}
 
 	// update the balance
 	q := `
@@ -324,6 +335,7 @@ func (nb *netBank) DeleteAccount(num int) error {
 			tx.Commit()
 		}
 	}
+
 	return nil
 }
 
@@ -438,10 +450,10 @@ func (nb *netBank) GetNewId() (int, error) {
 	return newID, nil
 }
 
-func (nb *netBank) UpdateAccount(id int, c *Customer) error {
+func (nb *netBank) UpdateAccount(id int, c *Customer) (*Account, error) {
 	tx, err := nb.Begin()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer tx.Rollback()
 
@@ -453,10 +465,40 @@ func (nb *netBank) UpdateAccount(id int, c *Customer) error {
 	`
 	_, err = tx.ExecContext(context.Background(), q, c.Name, c.Address, c.Phone, id)
 	if err != nil {
-		return err
+		return nil, err
 	} else {
 		tx.Commit()
 	}
 
-	return nil
+	account, err := nb.GetAccount(id)
+	if err != nil {
+		return nil, err
+	}
+
+	return account, nil
+}
+
+func (nb *netBank) GetBalance(num int) (*Account, error) {
+	var (
+		id      int
+		balance float64
+	)
+
+	q := `SELECT id, balance 
+	      FROM account 
+		  WHERE account.id=$1;`
+	row := nb.db.QueryRowContext(context.Background(), q, num)
+
+	err := row.Scan(&id, &balance)
+	if err != nil {
+		return nil, err
+	}
+
+	account := Account{
+		Customer: Customer{},
+		Number:   id,
+		Balance:  balance,
+	}
+
+	return &account, nil
 }

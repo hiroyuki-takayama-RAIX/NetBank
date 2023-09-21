@@ -36,7 +36,7 @@ func InsertTestData() error {
 
 	q := `
 	INSERT INTO customer (id, username, addr, phone) 
-	VALUES (1001, 'John', 'Los Angeles, California', '(213) 555 0147');
+	VALUES (1001, 'John', 'Los Angeles, California', '(213) 444 0147');
 
 	INSERT INTO account (id, balance) 
 	VALUES (1001, 100);

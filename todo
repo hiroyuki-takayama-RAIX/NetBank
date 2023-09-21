@@ -2,12 +2,12 @@
 [x] statementメソッドで"select * from ~"ができるようにする
   [x] "*JOIN ~" のクエリでどのような挙動をするか確認する
 [x] depositeメソッドで"update * ~" ができるようにする
-[x] widhdrawメソッドで"update * ~" ができるようにする
+[x] waccountshdrawメソッドで"update * ~" ができるようにする
 [x] transferメソッドで"update * ~"　ができるようにする
 [x] Accountのメソッドを削除する
 [x] createAccountメソッドを作り、"insert *"ができるようにする
 [x] deleteAccountメソッドを作り、"delete *"が出るようにする
-  [-] 存在しないidのaccountの明細を出そうとしたらエラー分が表示されるようにする
+  [-] 存在しないaccountsのaccountの明細を出そうとしたらエラー分が表示されるようにする
 [x] テストコードにbeforeEach を作成
 [x] テストコードにafterEach を作成
 
@@ -30,16 +30,21 @@
 
 
 <apiの改修>
-id/　
+accounts/　
   GET => 全てのアカウントをJSONとして取得する。新しい関数 => done
 
-id/{number}/
+accounts/{number}/
   GET => numberに合致するアカウント情報をjsonとして取得する。statement => done
   DELETE => numberに合致するwアカウントをDBから削除する。deleteAccount
 
-id/{number}/ + bodyParameter
+accounts/{number}/ + bodyParameter
   POST => 新しいアカウントを作成するための情報をJSONで送信し、登録する。=> done
     [] change request body only customer struct
   PUT => アカウント情報を変更する
   PATCH => 預金残高を変更させる。deposit, withdraw, transfer
-  
+
+accounts/{number}/balance
+  GET => 指定のaccountsの預金残高を取得
+
+accounts/balance?amount={number}
+  GET => 指定の預金残高を持っているアカウントの情報を取得 
