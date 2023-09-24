@@ -60,7 +60,7 @@ func TestGetAccounts(t *testing.T) {
 	for _, f := range fs {
 		t.Run(f.name, func(t *testing.T) {
 			// Create a new HTTP request
-			req, err := http.NewRequest("Get", f.uri, nil)
+			req, err := http.NewRequest("GET", f.uri, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -114,7 +114,7 @@ func TestGetAccount(t *testing.T) {
 
 	for _, f := range fs {
 		t.Run(f.name, func(t *testing.T) {
-			req, err := http.NewRequest("Get", f.uri, nil)
+			req, err := http.NewRequest("GET", f.uri, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -400,6 +400,49 @@ func TestUpdateAccount(t *testing.T) {
 			}
 			req.Header.Set("Content-Type", "application/json")
 			rr := httptest.NewRecorder()
+			router.ServeHTTP(rr, req)
+			assert.Equal(t, f.code, rr.Code)
+			assert.JSONEq(t, f.body, rr.Body.String())
+		})
+	}
+}
+
+func TestGetBalance(t *testing.T) {
+	err := core.InsertTestData()
+	if err != nil {
+		t.Errorf("failed to insertTestData(): %v", err)
+	}
+	defer core.DeleteTestData()
+
+	fs := make([]*fixture, 3)
+	fs[0] = &fixture{
+		name: "Successfully Get a balance.",
+		uri:  "/accounts/1001/balance",
+		code: http.StatusOK,
+		body: `{"id":1001,"balance":100}`,
+	}
+	fs[1] = &fixture{
+		name: "Invalied id number.",
+		uri:  "/accounts/千百一/balance",
+		code: http.StatusBadRequest,
+		body: `{"error":"got 千百一 as invalied id"}`,
+	}
+	fs[2] = &fixture{
+		name: "Account not found.",
+		uri:  "/accounts/404/balance",
+		code: http.StatusNotFound,
+		body: `{"error":"account(ID: 404) doesnt exist"}`,
+	}
+
+	for _, f := range fs {
+		t.Run(f.name, func(t *testing.T) {
+			req, err := http.NewRequest("GET", f.uri, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			rr := httptest.NewRecorder()
+			router := gin.Default()
+			router.GET("/accounts/:id/balance", GetBalance)
 			router.ServeHTTP(rr, req)
 			assert.Equal(t, f.code, rr.Code)
 			assert.JSONEq(t, f.body, rr.Body.String())

@@ -227,12 +227,15 @@ func GetBalance(c *gin.Context) {
 		msg := fmt.Sprintf("got %v as invalied id", param)
 		c.JSON(http.StatusBadRequest, gin.H{"error": msg})
 	} else {
-		balance, err := nb.GetBalance(id)
+		account, err := nb.GetAccount(id)
 		if err != nil {
 			msg := fmt.Sprintf("account(ID: %v) doesnt exist", id)
 			c.JSON(http.StatusNotFound, gin.H{"error": msg})
 		} else {
-			c.IndentedJSON(http.StatusOK, balance)
+			r := make(map[string]any)
+			r["balance"] = account.Balance
+			r["id"] = account.Number
+			c.IndentedJSON(http.StatusOK, r)
 		}
 	}
 }
