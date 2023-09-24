@@ -227,6 +227,7 @@ func GetBalance(c *gin.Context) {
 		msg := fmt.Sprintf("got %v as invalied id", param)
 		c.JSON(http.StatusBadRequest, gin.H{"error": msg})
 	} else {
+		// coreパッケージにGetBalance()を作成するのではなく、GetAccount()を流用して必要な情報を抽出する。
 		account, err := nb.GetAccount(id)
 		if err != nil {
 			msg := fmt.Sprintf("account(ID: %v) doesnt exist", id)

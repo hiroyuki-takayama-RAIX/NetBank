@@ -478,28 +478,3 @@ func (nb *netBank) UpdateAccount(id int, c *Customer) (*Account, error) {
 
 	return account, nil
 }
-
-func (nb *netBank) GetBalance(num int) (*Account, error) {
-	var (
-		id      int
-		balance float64
-	)
-
-	q := `SELECT id, balance 
-	      FROM account 
-		  WHERE account.id=$1;`
-	row := nb.db.QueryRowContext(context.Background(), q, num)
-
-	err := row.Scan(&id, &balance)
-	if err != nil {
-		return nil, err
-	}
-
-	account := Account{
-		Customer: Customer{},
-		Number:   id,
-		Balance:  balance,
-	}
-
-	return &account, nil
-}
