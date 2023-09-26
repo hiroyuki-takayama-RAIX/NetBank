@@ -24,6 +24,14 @@ type Account struct {
 	Balance float64 `json:"balance"`
 }
 
+// a field name in a struct must have capital initial when its encoded as json.
+type Trade struct {
+	Class  string  `json:"class"`
+	Amount float64 `json:"amount"`
+	From   int     `json:"from"`
+	To     int     `json:"to"`
+}
+
 type netBank struct {
 	db *sql.DB
 }
@@ -75,10 +83,10 @@ func (nb *netBank) Begin() (*sql.Tx, error) {
 	return nb.db.Begin()
 }
 
-func (nb *netBank) Deposit(num int, money float64) error {
+func (nb *netBank) Deposit(num int, money float64) (*Account, error) {
 	// check money is more than 0
 	if money <= 0 {
-		return fmt.Errorf("deposit of account_%v is less than 0. you was going to deposit %v$", num, money)
+		return nil, fmt.Errorf("deposit of account_%v is less than 0. you was going to deposit %v$", num, money)
 	}
 
 	// extract the account's balance
@@ -91,18 +99,18 @@ func (nb *netBank) Deposit(num int, money float64) error {
 	row := nb.db.QueryRowContext(context.Background(), q, num)
 	err := row.Scan(&balance)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// check balance is more than 0
 	if balance < 0 {
-		return fmt.Errorf("balance of account_%v is less than 0. currenct balance is %v", num, balance)
+		return nil, fmt.Errorf("balance of account_%v is less than 0. currenct balance is %v", num, balance)
 	}
 
 	// start the transaction
 	tx, err := nb.db.Begin()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer tx.Rollback()
 
@@ -114,62 +122,65 @@ func (nb *netBank) Deposit(num int, money float64) error {
 	`
 	_, err = tx.ExecContext(context.Background(), q, money+balance, num)
 	if err != nil {
-		return err
+		return nil, err
 	} else {
 		tx.Commit()
 	}
 
-	return nil
+	account, err := nb.GetAccount(num)
+	if err != nil {
+		return nil, err
+	}
+
+	return account, nil
 }
 
-func (nb *netBank) Withdraw(num int, money float64) error {
+func (nb *netBank) Withdraw(num int, money float64) (*Account, error) {
 	if money <= 0 {
-		return fmt.Errorf("withdraw is less than zero. id_%v was going to withdraw %v", num, money)
+		return nil, fmt.Errorf("withdraw is less than zero. id_%v was going to withdraw %v", num, money)
 	}
 
 	// extract the account's balance
-	var balance float64
-	q := `
-	SELECT balance 
-	FROM account 
-	WHERE id=$1;
-	`
-	row := nb.db.QueryRowContext(context.Background(), q, num)
-	err := row.Scan(&balance)
+	balance, err := nb.GetBalance(num)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	// check balance is more than 0
+	// check which balance is more than 0 or not.
 	if balance < 0 {
-		return fmt.Errorf("balance is less than 0. id_%v's currenct balance is %v", num, balance)
+		return nil, fmt.Errorf("balance is less than 0. id_%v's currenct balance is %v", num, balance)
 	}
 
 	if balance-money < 0 {
-		return fmt.Errorf("balance is less than withdraw. id_%v's currenct balance is %v, but its withdraw is %v", num, balance, money)
+		return nil, fmt.Errorf("amount is grater than the balance. your amount is %v, but the balance is %v", money, balance)
 	}
 
 	// start the transaction
 	tx, err := nb.db.Begin()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer tx.Rollback()
 
 	// update the balance
-	q = `
+	q := `
 	UPDATE account 
 	SET balance=$1 
 	WHERE id=$2;
 	`
 	_, err = tx.ExecContext(context.Background(), q, balance-money, num)
 	if err != nil {
-		return err
+		return nil, err
 	} else {
 		tx.Commit()
 	}
 
-	return nil
+	account, err := nb.GetAccount(num)
+	if err != nil {
+		return nil, err
+	}
+
+	return account, nil
 }
 
 func (nb *netBank) Statement(num int) (string, error) {
@@ -194,54 +205,52 @@ func (nb *netBank) Statement(num int) (string, error) {
 	return s, nil
 }
 
-func (nb *netBank) Transfer(sender int, reciever int, money float64) error {
+func (nb *netBank) Transfer(sender int, reciever int, money float64) ([]*Account, error) {
 	/*
 			nb.Withdraw() と nb.Deposit() を流用する方法もあるが、
 		    トランザクションの切り替えの間に取引が行われてしまう恐れがないように
 			預金残高の削減と増加を一つのトランザクションにまとめる。
 	*/
 	if money <= 0 {
-		return fmt.Errorf("amount of transfer is less than zero. from id_%v to id_%v was going to withdraw %v", sender, reciever, money)
+		return nil, fmt.Errorf("amount of transfer is less than zero. from id_%v to id_%v was going to withdraw %v", sender, reciever, money)
 	}
 
 	/*--- validation of sender ---*/
-	var senderBalance float64
-	senderQuery := `
-	SELECT balance 
-	FROM account 
-	WHERE id=$1;
-	`
-	senderRow := nb.db.QueryRowContext(context.Background(), senderQuery, sender)
-	err := senderRow.Scan(&senderBalance)
+	senderBalance, err := nb.GetBalance(sender)
 	if err != nil {
-		return err
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("sender's account(ID: %v) is not found: %w", sender, err)
+		} else {
+			return nil, err
+		}
 	}
 
 	if senderBalance < 0 {
-		return fmt.Errorf("balance is less than 0. id_%v's currenct balance is %v", sender, senderBalance)
+		return nil, fmt.Errorf("balance is less than 0. id_%v's currenct balance is %v", sender, senderBalance)
 	}
 
 	if senderBalance-money < 0 {
-		return fmt.Errorf("balance is less than transfer. id_%v's currenct balance is %v, but its transfer is %v", sender, senderBalance, money)
+		return nil, fmt.Errorf("amount is grater than the balance. sender's amount is %v, but the balance is %v", money, senderBalance)
 	}
 
 	/*--- validation of reciever ---*/
-	var recieverBalance float64
-	recieverQuery := `SELECT balance FROM account WHERE id=$1;`
-	recieverRow := nb.db.QueryRowContext(context.Background(), recieverQuery, reciever)
-	err = recieverRow.Scan(&recieverBalance)
+	recieverBalance, err := nb.GetBalance(reciever)
 	if err != nil {
-		return err
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("reciever's account(ID: %v) is not found: %w", reciever, err)
+		} else {
+			return nil, err
+		}
 	}
 
 	if recieverBalance < 0 {
-		return fmt.Errorf("balance of account_%v is less than 0. currenct balance is %v", reciever, recieverBalance)
+		return nil, fmt.Errorf("balance of account_%v is less than 0. currenct balance is %v", reciever, recieverBalance)
 	}
 
 	// start the transaction
 	tx, err := nb.db.Begin()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer tx.Rollback()
 
@@ -249,17 +258,29 @@ func (nb *netBank) Transfer(sender int, reciever int, money float64) error {
 	withdraw := "UPDATE account SET balance=$1 WHERE id=$2;"
 	_, err = tx.ExecContext(context.Background(), withdraw, senderBalance-money, sender)
 	if err != nil {
-		return err
+		return nil, err
 	} else {
 		deposit := "UPDATE account SET balance=$1 WHERE id=$2;"
 		_, err = tx.ExecContext(context.Background(), deposit, recieverBalance+money, reciever)
 		if err != nil {
-			return err
+			return nil, err
 		} else {
 			tx.Commit()
 		}
 	}
-	return nil
+
+	accounts := make([]*Account, 2)
+	from, err := nb.GetAccount(sender)
+	if err != nil {
+		return nil, err
+	}
+	to, err := nb.GetAccount(reciever)
+	if err != nil {
+		return nil, err
+	}
+	accounts[0] = from
+	accounts[1] = to
+	return accounts, nil
 }
 
 func (nb *netBank) CreateAccount(c *Customer) (*Account, error) {
@@ -418,6 +439,15 @@ func (nb *netBank) GetAccount(num int) (*Account, error) {
 	return &account, nil
 }
 
+func (nb *netBank) GetBalance(id int) (float64, error) {
+	account, err := nb.GetAccount(id)
+	if err != nil {
+		return 0, err
+	} else {
+		return account.Balance, nil
+	}
+}
+
 func (nb *netBank) GetNewId() (int, error) {
 	var id int
 
@@ -477,29 +507,4 @@ func (nb *netBank) UpdateAccount(id int, c *Customer) (*Account, error) {
 	}
 
 	return account, nil
-}
-
-func (nb *netBank) GetBalance(num int) (*Account, error) {
-	var (
-		id      int
-		balance float64
-	)
-
-	q := `SELECT id, balance 
-	      FROM account 
-		  WHERE account.id=$1;`
-	row := nb.db.QueryRowContext(context.Background(), q, num)
-
-	err := row.Scan(&id, &balance)
-	if err != nil {
-		return nil, err
-	}
-
-	account := Account{
-		Customer: Customer{},
-		Number:   id,
-		Balance:  balance,
-	}
-
-	return &account, nil
 }

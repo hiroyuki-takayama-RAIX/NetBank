@@ -1,18 +1,26 @@
 <API Document>
-accounts/　
+[x] accounts/　
   GET => 全てのアカウント情報を取得。
 
-accounts/{number}/
+[x] accounts/{number}/
   GET => 指定したIDに合致するアカウントの情報をjsonとして取得する。
   DELETE => 指定したIDに合致するアカウントを削除する
 
-accounts/{number}/ + bodyParameter
+[x] accounts/{number}/ + bodyParameter
   POST => 新しいアカウントを作成するための情報をJSONで送信し、登録する。
   PUT => アカウント情報を変更する
   PATCH => 預金残高を変更させる。ボディパラメーターの"trade"の値によって預金・引き出し・送金を切り替える
 
-accounts/{number}/balance
+[x] accounts/{number}/balance
   GET => 指定のIDの預金残高を取得
+  PATCH => 預金、引き出し、送金
 
-accounts/balance?max-amount={number}&min-amount={number}
+[x] accounts/balance?max-amount={number}&min-amount={number}
   GET => 指定の預金残高を持っているアカウントの情報を取得
+
+[] 預金、引き出し、送金の分岐をインターフェースを作成して削除する
+[] エラーの種類によって400、404、500エラーを切り替える
+[] ビルド用コンテナ、本番用コンテナを作成して、その上でバイナリを実行する
+[] github_actions上でCICDを実行する
+[] とにかくリファクタリング
+[] postgresのアウトプットを行う

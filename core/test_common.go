@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"fmt"
 )
 
 var (
@@ -76,4 +77,22 @@ func DeleteTestData() error {
 	}
 
 	return nil
+}
+
+func compareErrors(want error, got error) string {
+	if want == nil {
+		if got == want {
+			return ""
+		} else {
+			msg := fmt.Sprintf("Actual error value is not match to want:\nwant%v\ngot :%v", want, got.Error())
+			return msg
+		}
+	} else {
+		if want.Error() == got.Error() {
+			return ""
+		} else {
+			msg := fmt.Sprintf("Actual error value is not match to want:\nwant:%v\ngot :%v", want.Error(), got.Error())
+			return msg
+		}
+	}
 }
