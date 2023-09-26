@@ -2,9 +2,13 @@ module github.com/hiroyuki-takayama-RAIX/core
 
 go 1.20
 
-require github.com/jackc/pgx/v4 v4.18.1
+require (
+	github.com/jackc/pgx/v4 v4.18.1
+	gotest.tools/v3 v3.5.1
+)
 
 require (
+	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/jackc/chunkreader/v2 v2.0.1 // indirect
 	github.com/jackc/pgconn v1.14.0 // indirect
 	github.com/jackc/pgio v1.0.0 // indirect

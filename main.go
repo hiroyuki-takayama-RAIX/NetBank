@@ -13,6 +13,7 @@ func main() {
 	router.DELETE("/accounts/:id", api.DeleteAccount)
 	router.PUT("/accounts/:id", api.UpdateAccount)
 	router.GET("/accounts/:id/balance", api.GetBalance)
+	router.PATCH("/accounts/:id/balance", api.Trading)
 
 	router.Run("localhost:8080")
 }

@@ -3,6 +3,8 @@ package api
 import (
 	// "_" in import statement means blank import
 
+	"database/sql"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -168,20 +170,14 @@ func UpdateAccount(c *gin.Context) {
 	}
 }
 
-/*
-type trade struct {
-	kind   string
-	amount float64
-	to     int
-}
-
 const (
+	TEST     = "test"
 	DEPOSIT  = "deposit"
 	WITHDRAW = "withdraw"
 	TRANSFER = "transfer"
 )
 
-func trading(c *gin.Context) {
+func Trading(c *gin.Context) {
 	nb, err := core.NewNetBank()
 	if err != nil {
 		msg := fmt.Sprintf("failed to initialize netbank instance: %v", err)
@@ -196,20 +192,55 @@ func trading(c *gin.Context) {
 		msg := fmt.Sprintf("got %v as invalied id", param)
 		c.JSON(http.StatusBadRequest, gin.H{"error": msg})
 	} else {
-		var trading trade
-		err = c.BindJSON(&trading)
+		_, err := nb.GetAccount(id)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalied request"})
-		} else if trading.kind != DEPOSIT && trading.kind != WITHDRAW && trading.kind != TRANSFER {
-			msg := fmt.Sprintf("you about to do %v, but its not defined.", trading.kind)
-			c.JSON(http.StatusBadRequest, gin.H{"error": msg})
-		} else if trading.amount == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "request has empty address"})
-		} else if trading.Phone == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "request has empty phone number"})
+			msg := fmt.Sprintf("account(ID: %v) doesnt exist", id)
+			c.JSON(http.StatusNotFound, gin.H{"error": msg})
+		} else {
+			var t core.Trade
+			err = c.BindJSON(&t)
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "Invalied request"})
+			} else if t.Amount <= 0 {
+				msg := fmt.Sprintf("amount is less than zero. your input is %v", t.Amount)
+				c.JSON(http.StatusBadRequest, gin.H{"error": msg})
+			} else {
+				switch t.Class {
+				case DEPOSIT:
+					account, err := nb.Deposit(id, t.Amount)
+					if err != nil {
+						c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+					} else {
+						c.JSON(http.StatusOK, account)
+					}
+				case WITHDRAW:
+					account, err := nb.Withdraw(id, t.Amount)
+					if err != nil {
+						c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+					} else {
+						c.JSON(http.StatusOK, account)
+					}
+				case TRANSFER:
+					accounts, err := nb.Transfer(id, t.To, t.Amount)
+					if err != nil {
+						if errors.Is(err, sql.ErrNoRows) {
+							c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+						} else {
+							c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+						}
+					} else {
+						c.JSON(http.StatusOK, accounts)
+					}
+				case TEST:
+					c.JSON(http.StatusOK, gin.H{"msg": "Trading() is executed collectlly."})
+				default:
+					msg := fmt.Sprintf("you about to do %v, but its not defined.", t.Class)
+					c.JSON(http.StatusBadRequest, gin.H{"error": msg})
+				}
+			}
+		}
 	}
 }
-*/
 
 func GetBalance(c *gin.Context) {
 	nb, err := core.NewNetBank()

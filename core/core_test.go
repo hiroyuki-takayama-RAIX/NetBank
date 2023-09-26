@@ -4,6 +4,7 @@ package core
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"math/rand"
 	"os"
@@ -11,6 +12,7 @@ import (
 	"testing"
 
 	_ "github.com/jackc/pgx/v4/stdlib"
+	"gotest.tools/v3/assert"
 )
 
 func TestMain(m *testing.M) {
@@ -159,7 +161,6 @@ func TestGetAccount(t *testing.T) {
 	if !reflect.DeepEqual(got, expected) {
 		t.Errorf("got unexpected data:\nexpected: %v\ngot: %v", expected, got)
 	}
-
 }
 
 func TestCreateAccount(t *testing.T) {
@@ -263,82 +264,152 @@ func TestDeposit(t *testing.T) {
 	id := 1001
 	money := float64(100)
 
-	err = tnb.Deposit(id, money)
+	got, err := tnb.Deposit(id, money)
 	if err != nil {
 		t.Errorf("failed to deposit on account_%v: %v", id, err)
 	}
 
-	s, err := tnb.Statement(id)
-	if err != nil {
-		t.Errorf("cannnot generate the statement of account_%v: %v", id, err)
+	expected := &Account{
+		Customer: Customer{
+			Name:    "John",
+			Address: "Los Angeles, California",
+			Phone:   "(213) 444 0147",
+		},
+		Number:  1001,
+		Balance: 200,
 	}
-
-	expected := "1001 - John - 200"
-	if s != expected {
-		t.Errorf("got unexpected statement:\nexpected %v\ngot %v", expected, s)
-	}
+	assert.DeepEqual(t, expected, got)
 }
 
-// Invalid pattern test
+func TestDeposit_Exception(t *testing.T) {}
 
 func TestWithdraw(t *testing.T) {
-	err := InsertTestData()
-	if err != nil {
-		t.Errorf("failed to setup talbes: %v", err)
-	}
-	defer DeleteTestData()
-
-	id := 1001
-	money := float64(100)
-
-	err = tnb.Withdraw(id, money)
-	if err != nil {
-		t.Errorf("failed to withdraw: %v", err)
+	type fixture struct {
+		name     string
+		id       int
+		money    float64
+		expected *Account
+		err      error
 	}
 
-	s, err := tnb.Statement(id)
-	if err != nil {
-		t.Errorf("cannnot generate the statement: %v", err)
+	fs := make([]*fixture, 2)
+
+	fs[0] = &fixture{
+		name:  "Successfully Withdraw",
+		id:    1001,
+		money: 100,
+		expected: &Account{
+			Customer: Customer{
+				Name:    "John",
+				Address: "Los Angeles, California",
+				Phone:   "(213) 444 0147",
+			},
+			Number:  1001,
+			Balance: 0,
+		},
+		err: nil,
+	}
+	fs[1] = &fixture{
+		name:     "Amount is grater than balance",
+		id:       1001,
+		money:    120,
+		expected: nil,
+		err:      errors.New("amount is grater than the balance. your amount is 120, but the balance is 100"),
 	}
 
-	expected := "1001 - John - 0"
-	if s != expected {
-		t.Errorf("got unexpected statement:\nexpected %v\ngot %v", expected, s)
+	for _, f := range fs {
+		t.Run(f.name, func(t *testing.T) {
+			err := InsertTestData()
+			if err != nil {
+				t.Errorf("failed to setup talbes: %v", err)
+			}
+
+			got, err := tnb.Withdraw(f.id, f.money)
+			assert.DeepEqual(t, f.expected, got)
+			msg := compareErrors(f.err, err)
+			if msg != "" {
+				t.Errorf(msg)
+			}
+
+			DeleteTestData()
+		})
 	}
 }
 
+func TestWithdraw_Exceptions(t *testing.T) {}
+
 func TestTransfer(t *testing.T) {
-	err := InsertTestData()
-	if err != nil {
-		t.Errorf("failed to insertTestData(): %v", err)
-	}
-	defer DeleteTestData()
-
-	sender_id := 1001
-	reciever_id := 3003
-	money := float64(50)
-
-	err = tnb.Transfer(sender_id, reciever_id, money)
-	if err != nil {
-		t.Errorf("failed to withdraw: %v", err)
+	type fixture struct {
+		name     string
+		id       int
+		money    float64
+		to       int
+		expected []*Account
+		err      error
 	}
 
-	s, err := tnb.Statement(sender_id)
-	if err != nil {
-		t.Errorf("cannnot generate the statement of account_%v: %v", sender_id, err)
+	fs := make([]*fixture, 3)
+
+	fs[0] = &fixture{
+		name:  "successfully transfer",
+		id:    1001,
+		money: 20,
+		to:    3003,
+		expected: []*Account{
+			{
+				Customer: Customer{
+					Name:    "John",
+					Address: "Los Angeles, California",
+					Phone:   "(213) 444 0147",
+				},
+				Number:  1001,
+				Balance: 80,
+			},
+			{
+				Customer: Customer{
+					Name:    "Ide Non No",
+					Address: "Ta No Tsu",
+					Phone:   "(0120) 117 117",
+				},
+				Number:  3003,
+				Balance: 120,
+			},
+		},
+		err: nil,
 	}
-	expected := "1001 - John - 50"
-	if s != expected {
-		t.Errorf("got unexpected statement:\nexpected %v\ngot %v", expected, s)
+	fs[1] = &fixture{
+		name:     "Amount is grater than balance",
+		id:       1001,
+		money:    120,
+		to:       3003,
+		expected: nil,
+		err:      errors.New("amount is grater than the balance. sender's amount is 120, but the balance is 100"),
+	}
+	fs[2] = &fixture{
+		name:     "Recievers Account(ID: 404) is not found",
+		id:       1001,
+		money:    20,
+		to:       404,
+		expected: nil,
+		err:      errors.New("reciever's account(ID: 404) is not found: sql: no rows in result set"),
 	}
 
-	s, err = tnb.Statement(reciever_id)
-	if err != nil {
-		t.Errorf("cannnot generate the statement of account_%v: %v", reciever_id, err)
-	}
-	expected = "3003 - Ide Non No - 150"
-	if s != expected {
-		t.Errorf("got unexpected statement:\nexpected %v\ngot %v", expected, s)
+	for _, f := range fs {
+		t.Run(f.name, func(t *testing.T) {
+			err := InsertTestData()
+			if err != nil {
+				t.Errorf("failed to setup talbes: %v", err)
+			}
+
+			got, err := tnb.Transfer(f.id, f.to, f.money)
+			assert.DeepEqual(t, f.expected, got)
+			msg := compareErrors(f.err, err)
+			if msg != "" {
+				t.Errorf(msg)
+			}
+
+			DeleteTestData()
+		})
 	}
 }
 
@@ -649,4 +720,46 @@ func TestDatabaseSql(t *testing.T) {
 			t.Errorf("failed to extract row: %v\n got: %v\n expected: %v\n", err, ss, expected)
 		}
 	})
+}
+
+func TestGetBalance(t *testing.T) {
+	type fixture struct {
+		name     string
+		id       int
+		expected float64
+		err      error
+	}
+
+	fs := make([]*fixture, 2)
+
+	fs[0] = &fixture{
+		name:     "Successfully get balance",
+		id:       1001,
+		expected: 100,
+		err:      nil,
+	}
+	fs[1] = &fixture{
+		name:     "Not found id",
+		id:       404,
+		expected: 0,
+		err:      errors.New("sql: no rows in result set"),
+	}
+
+	for _, f := range fs {
+		t.Run(f.name, func(t *testing.T) {
+			err := InsertTestData()
+			if err != nil {
+				t.Errorf("failed to setup talbes: %v", err)
+			}
+
+			got, err := tnb.GetBalance(f.id)
+			assert.DeepEqual(t, f.expected, got)
+			msg := compareErrors(f.err, err)
+			if msg != "" {
+				t.Errorf(msg)
+			}
+
+			DeleteTestData()
+		})
+	}
 }
