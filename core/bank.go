@@ -53,15 +53,14 @@ func NewNetBank() (*netBank, error) {
 		source string
 	)
 
-	if env == "test" {
+	if env == "prod" {
+		// デプロイ用のコンテナにアプリケーションを立ち上げて、本番用のDBが立ち上がっているコンテナに接続する。故にproduction_db:5432にぬけて接続する。
+		driver = "pgx"
+		source = "host=production_db port=5432 user=postgres database=netbank password=postgres sslmode=disable"
+	} else {
+		// ローカル環境でアプリケーションを立ち上げて、テスト用のDBが立ち上がっているコンテナに接続する。故にlocalhost:5180に向けて接続する。
 		driver = "pgx"
 		source = "host=localhost port=5180 user=testUser database=netbank_test password=testPassword sslmode=disable"
-	} else if env == "prod" {
-		driver = "pgx"
-		source = "host=localhost port=1234 user=postgres database=netbank password=postgres sslmode=disable"
-	} else {
-		msg := fmt.Sprintf("invaild environment valiable %v", env)
-		panic(msg)
 	}
 
 	db, err := sql.Open(driver, source)
