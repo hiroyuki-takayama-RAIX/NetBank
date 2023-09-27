@@ -28,6 +28,16 @@ services:
       - ./script:/docker-entrypoint-initdb.d
       - db-store-test:/var/lib/postgresql/data
 
+  app:
+    image: netbank
+    build:
+      args:
+        - target=dev
+    volumes:
+      - .:/app
+    ports:
+      - "18000:80"
+
 volumes:
   db-store-production:
   db-store-test:

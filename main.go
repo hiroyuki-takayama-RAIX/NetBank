@@ -1,11 +1,18 @@
 package main
 
 import (
+	"os"
+
 	"github.com/gin-gonic/gin"
 	"github.com/hiroyuki-takayama-RAIX/api"
 )
 
 func main() {
+	env := os.Getenv("Env")
+	if env == "prod" {
+		gin.SetMode(gin.ReleaseMode)
+	}
+
 	router := gin.Default()
 	router.GET("/accounts", api.GetAccounts)
 	router.GET("/accounts/:id", api.GetAccount)
@@ -15,5 +22,9 @@ func main() {
 	router.GET("/accounts/:id/balance", api.GetBalance)
 	router.PATCH("/accounts/:id/balance", api.Trading)
 
-	router.Run("localhost:8080")
+	if env == "prod" {
+		router.Run("0.0.0.0:80")
+	} else {
+		router.Run("localhost:8080")
+	}
 }
