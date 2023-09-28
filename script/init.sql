@@ -16,16 +16,5 @@ CREATE TABLE account (
   FOREIGN KEY (id) REFERENCES customer(id)
 );
 
--- create tables for production code
--- CREATE TABLE production.customer (
---    id INT PRIMARY KEY,
---    username VARCHAR(255),
---    addr VARCHAR(255),
---    phone VARCHAR(53)
--- );
-
--- CREATE TABLE production.account (
---   id INT PRIMARY KEY,
---   balance FLOAT,
 --   FOREIGN KEY (id) REFERENCES production.customer(id)
 -- );
