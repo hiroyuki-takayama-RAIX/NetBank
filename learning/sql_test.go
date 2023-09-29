@@ -1205,8 +1205,88 @@ func TestORDERBY(t *testing.T) {
 }
 
 func TestQueryConbination(t *testing.T) {
+	err := core.CreateTestTableWithDuplicateValue()
+	if err != nil {
+		t.Errorf("failed to setup tables: %v", err)
+	}
+	defer core.DropDuplicateTables()
 
-	t.Run("UNION", func(t *testing.T) {})
+	err = core.CreateTestTable()
+	if err != nil {
+		t.Errorf("failed to setup tables: %v", err)
+	}
+	defer core.DropTables()
+
+	var (
+		id   int
+		name string
+	)
+
+	t.Run("UNION", func(t *testing.T) {
+		q := `
+		SELECT *
+		FROM duplicate_table
+		ORDER BY id, name
+		UNION
+		SELECT *
+		FROM right_table
+		ORDER BY id, name;
+		`
+		rows, err := db.QueryContext(context.Background(), q)
+		if err != nil {
+			t.Errorf("rows.Scan() is failed: %v", err)
+		}
+		defer rows.Close()
+
+		got := []rightTable{}
+
+		for rows.Next() {
+			err := rows.Scan(&id, &name)
+			if err != nil {
+				t.Errorf("%v", err)
+			}
+
+			rt := rightTable{
+				Id:   id,
+				Name: name,
+			}
+
+			got = append(got, rt)
+		}
+
+		want := []rightTable{
+			{
+				Id:   1,
+				Name: "a",
+			},
+			{
+				Id:   1,
+				Name: "a",
+			},
+			{
+				Id:   2,
+				Name: "b",
+			},
+			{
+				Id:   2,
+				Name: "c",
+			},
+			{
+				Id:   3,
+				Name: "c",
+			},
+			{
+				Id:   3,
+				Name: "d",
+			},
+			{
+				Id:   4,
+				Name: "a",
+			},
+		}
+
+		assert.Equal(t, want, got)
+	})
 
 	t.Run("INTERSECT", func(t *testing.T) {})
 
@@ -1231,4 +1311,8 @@ func TestWHERE(t *testing.T) {
 	t.Run("CUBE", func(t *testing.T) {})
 
 	t.Run("ROLLUP", func(t *testing.T) {})
+}
+
+func TestWith(t *testing.T) {
+
 }
