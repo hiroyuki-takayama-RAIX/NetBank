@@ -266,3 +266,10 @@ GROUP BY CUBE (year, month, product_id);
 -- ROLLUP
 -- ROLLUP句内で指定されたカラムの中で、左側に設定したカラムを中心に項目を作成して、それぞれで集計を行う。
 -- この場合だと、(year, month, product_id), (year, month), (year) ごとにsalesの集計を行う。
+SELECT
+    EXTRACT(YEAR FROM sale_date) AS year,
+    EXTRACT(MONTH FROM sale_date) AS month,
+    product_id,
+    SUM(sales) AS total_sales
+FROM sales
+GROUP BY ROLLUP (year, month, product_id);
