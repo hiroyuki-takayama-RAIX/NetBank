@@ -1293,13 +1293,6 @@ func TestQueryConbination(t *testing.T) {
 	t.Run("EXCEPT", func(t *testing.T) {})
 }
 
-func TestTableFunction(t *testing.T) {
-
-	t.Run("UNNEST", func(t *testing.T) {})
-
-	t.Run("LATERAL", func(t *testing.T) {})
-}
-
 func TestWHERE(t *testing.T) {
 
 	t.Run("HAVING", func(t *testing.T) {})
@@ -1311,8 +1304,4 @@ func TestWHERE(t *testing.T) {
 	t.Run("CUBE", func(t *testing.T) {})
 
 	t.Run("ROLLUP", func(t *testing.T) {})
-}
-
-func TestWith(t *testing.T) {
-
 }
