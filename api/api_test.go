@@ -466,7 +466,7 @@ func TestDeposit(t *testing.T) {
 	}
 
 	router := gin.Default()
-	router.PATCH("/accounts/:id/balance", Trading)
+	router.PATCH("/accounts/:id/balance", FinancialTransaction)
 	bs := []byte(f.bodyParam)
 	req, err := http.NewRequest("PATCH", f.uri, bytes.NewBuffer(bs))
 	if err != nil {
@@ -503,7 +503,7 @@ func TestWithdraw(t *testing.T) {
 				t.Errorf("failed to insertTestData(): %v", err)
 			}
 			router := gin.Default()
-			router.PATCH("/accounts/:id/balance", Trading)
+			router.PATCH("/accounts/:id/balance", FinancialTransaction)
 			bs := []byte(f.bodyParam)
 			req, err := http.NewRequest("PATCH", f.uri, bytes.NewBuffer(bs))
 			if err != nil {
@@ -550,7 +550,7 @@ func TestTransfer(t *testing.T) {
 				t.Errorf("failed to insertTestData(): %v", err)
 			}
 			router := gin.Default()
-			router.PATCH("/accounts/:id/balance", Trading)
+			router.PATCH("/accounts/:id/balance", FinancialTransaction)
 			bs := []byte(f.bodyParam)
 			req, err := http.NewRequest("PATCH", f.uri, bytes.NewBuffer(bs))
 			if err != nil {
@@ -566,7 +566,7 @@ func TestTransfer(t *testing.T) {
 	}
 }
 
-func TestTrading(t *testing.T) {
+func TestFinancialTransaction(t *testing.T) {
 	err := core.InsertTestData()
 	if err != nil {
 		t.Errorf("failed to insertTestData(): %v", err)
@@ -607,13 +607,13 @@ func TestTrading(t *testing.T) {
 		uri:       "/accounts/1001/balance",
 		bodyParam: `{"class":"test","amount":20}`,
 		code:      http.StatusOK,
-		body:      `{"msg":"Trading() is executed collectlly."}`,
+		body:      `{"msg":"FinancialTransaction() is executed collectlly."}`,
 	}
 
 	for _, f := range fs {
 		t.Run(f.name, func(t *testing.T) {
 			router := gin.Default()
-			router.PATCH("/accounts/:id/balance", Trading)
+			router.PATCH("/accounts/:id/balance", FinancialTransaction)
 			bs := []byte(f.bodyParam)
 			req, err := http.NewRequest("PATCH", f.uri, bytes.NewBuffer(bs))
 			if err != nil {

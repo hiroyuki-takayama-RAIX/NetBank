@@ -57,16 +57,22 @@ func TestBegin(t *testing.T) {
 		tx.Commit()
 	}
 
-	s, err := tnb.Statement(1001)
+	got, err := tnb.GetAccount(1001)
 	if err != nil {
-		t.Errorf("cannnot generate the statement of account_%v: %v", 1001, err)
+		t.Errorf("failed to get account_%v: %v", 1001, err)
 	}
 
-	expected := "1001 - John - 200"
-
-	if reflect.DeepEqual(s, expected) == false {
-		t.Errorf("rows mismatch! expected %v, got %v", expected, s)
+	want := &Account{
+		Customer: Customer{
+			Name:    "John",
+			Address: "Los Angeles, California",
+			Phone:   "(213) 444 0147",
+		},
+		Number:  1001,
+		Balance: 100,
 	}
+
+	assert.DeepEqual(t, want, got)
 }
 
 func TestNewNetBank(t *testing.T) {
@@ -209,9 +215,9 @@ func TestDeleteAccount(t *testing.T) {
 		t.Errorf("failed to delete a new account_%v: %v", id, err)
 	}
 
-	_, err = tnb.Statement(id)
+	_, err = tnb.GetAccount(id)
 	if err == nil {
-		t.Errorf("failed to delete account_%v", id)
+		t.Errorf("failed to get account_%v", id)
 	}
 
 	id = 404
@@ -409,25 +415,6 @@ func TestTransfer(t *testing.T) {
 
 			DeleteTestData()
 		})
-	}
-}
-
-func TestStatement(t *testing.T) {
-	err := InsertTestData()
-	if err != nil {
-		t.Errorf("failed to insertTestData(): %v", err)
-	}
-	defer DeleteTestData()
-
-	id := 1001
-	s, err := tnb.Statement(1001)
-	if err != nil {
-		t.Errorf("cannnot generate the statement of account_%v: %v", id, err)
-	}
-
-	expected := "1001 - John - 100"
-	if s != expected {
-		t.Errorf("got unexpected statement:\nexpected %v\ngot %v", expected, s)
 	}
 }
 

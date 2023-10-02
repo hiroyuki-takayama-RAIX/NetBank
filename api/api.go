@@ -1,7 +1,7 @@
 package api
 
 import (
-	// "_" in import statement means blank import
+	// "_" in import means blank import
 
 	"database/sql"
 	"errors"
@@ -177,7 +177,7 @@ const (
 	TRANSFER = "transfer"
 )
 
-func Trading(c *gin.Context) {
+func FinancialTransaction(c *gin.Context) {
 	nb, err := core.NewNetBank()
 	if err != nil {
 		msg := fmt.Sprintf("failed to initialize netbank instance: %v", err)
@@ -205,6 +205,14 @@ func Trading(c *gin.Context) {
 				msg := fmt.Sprintf("amount is less than zero. your input is %v", t.Amount)
 				c.JSON(http.StatusBadRequest, gin.H{"error": msg})
 			} else {
+				/*
+					accounts, err := nb.Execute(ft)
+					if err != nil {
+						c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+					} else {
+						c.JSON(http.StatusOK, account)
+					}
+				*/
 				switch t.Class {
 				case DEPOSIT:
 					account, err := nb.Deposit(id, t.Amount)

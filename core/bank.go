@@ -54,7 +54,7 @@ func NewNetBank() (*netBank, error) {
 	)
 
 	if env == "prod" {
-		// デプロイ用のコンテナにアプリケーションを立ち上げて、本番用のDBが立ち上がっているコンテナに接続する。故にproduction_db:5432にぬけて接続する。
+		// デプロイ用のコンテナにアプリケーションを立ち上げて、本番用のDBが立ち上がっているコンテナに接続する。故にproduction_db:5432に向けて接続する。
 		driver = "pgx"
 		source = "host=production_db port=5432 user=postgres database=netbank password=postgres sslmode=disable"
 	} else {
@@ -180,28 +180,6 @@ func (nb *netBank) Withdraw(num int, money float64) (*Account, error) {
 	}
 
 	return account, nil
-}
-
-func (nb *netBank) Statement(num int) (string, error) {
-	var (
-		id      int
-		balance float64
-		name    string
-	)
-
-	q := `SELECT account.id, balance, username 
-	      FROM account 
-		  INNER JOIN customer 
-		  ON account.id=customer.id 
-		  WHERE account.id=$1;`
-	row := nb.db.QueryRowContext(context.Background(), q, num)
-	err := row.Scan(&id, &balance, &name)
-	if err != nil {
-		return "", err
-	}
-
-	s := fmt.Sprintf("%v - %v - %v", id, name, balance)
-	return s, nil
 }
 
 func (nb *netBank) Transfer(sender int, reciever int, money float64) ([]*Account, error) {
@@ -487,7 +465,6 @@ func (nb *netBank) UpdateAccount(id int, c *Customer) (*Account, error) {
 	}
 	defer tx.Rollback()
 
-	// check update statement
 	q := `
 	UPDATE customer
 	SET username=$1, addr=$2, phone=$3 
