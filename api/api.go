@@ -24,8 +24,8 @@ func GetAccounts(c *gin.Context) {
 	}
 	defer nb.Close()
 
-	minBalanceStr := c.DefaultQuery("min-balance", "0")          // Default value is "0"
-	maxBalanceStr := c.DefaultQuery("max-balance", "2147483647") // Default value is "0"
+	minBalanceStr := c.DefaultQuery("min-balance", "0")
+	maxBalanceStr := c.DefaultQuery("max-balance", "2147483647")
 
 	// Convert query parameters to float64
 	minBalance, err := strconv.ParseFloat(minBalanceStr, 64)
@@ -240,7 +240,7 @@ func FinancialTransaction(c *gin.Context) {
 						c.JSON(http.StatusOK, accounts)
 					}
 				case TEST:
-					c.JSON(http.StatusOK, gin.H{"msg": "Trading() is executed collectlly."})
+					c.JSON(http.StatusOK, gin.H{"msg": "FinancialTransaction() is executed collectlly."})
 				default:
 					msg := fmt.Sprintf("you about to do %v, but its not defined.", t.Class)
 					c.JSON(http.StatusBadRequest, gin.H{"error": msg})

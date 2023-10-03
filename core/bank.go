@@ -55,6 +55,7 @@ func NewNetBank() (*netBank, error) {
 
 	if env == "prod" {
 		// デプロイ用のコンテナにアプリケーションを立ち上げて、本番用のDBが立ち上がっているコンテナに接続する。故にproduction_db:5432に向けて接続する。
+		// docker-composeによって同時に立ち上げたコンテナ同士の通信であるので、host名にサービス名、port名にコンテナ内部のポート番号を設定する。
 		driver = "pgx"
 		source = "host=production_db port=5432 user=postgres database=netbank password=postgres sslmode=disable"
 	} else {

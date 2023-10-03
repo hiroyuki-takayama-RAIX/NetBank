@@ -69,7 +69,7 @@ func TestBegin(t *testing.T) {
 			Phone:   "(213) 444 0147",
 		},
 		Number:  1001,
-		Balance: 100,
+		Balance: 200,
 	}
 
 	assert.DeepEqual(t, want, got)
